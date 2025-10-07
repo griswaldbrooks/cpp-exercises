@@ -27,5 +27,6 @@ command_joint_state_test
 *~
 .DS_Store
 
-# Pixi lock file (keep pixi.toml but ignore lock)
+# Pixi files (each week manages its own environment)
+.pixi/
 pixi.lock
