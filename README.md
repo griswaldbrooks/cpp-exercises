@@ -1,6 +1,6 @@
 # C++ STL Learning Exercises
 
-[![CI](https://github.com/griswald/cpp-exercises/workflows/CI/badge.svg)](https://github.com/griswald/cpp-exercises/actions)
+[![CI](https://github.com/griswaldbrooks/cpp-exercises/actions/workflows/ci.yml/badge.svg)](https://github.com/griswaldbrooks/cpp-exercises/actions/workflows/ci.yml)
 
 A structured curriculum for learning the C++ Standard Template Library using C++20, designed for junior developers.
 
