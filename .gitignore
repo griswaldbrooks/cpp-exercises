@@ -1,0 +1,31 @@
+# Build directories
+build/
+.pixi/
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.cmake
+
+# Compiled binaries
+*.o
+*.so
+*.a
+*.exe
+*_test
+normalize_whitespace_test
+split_test
+serial_protocol_test
+command_joint_state_test
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Pixi lock file (keep pixi.toml but ignore lock)
+pixi.lock
