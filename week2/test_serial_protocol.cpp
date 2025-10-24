@@ -1,29 +1,31 @@
 #include <gtest/gtest.h>
-#include <string>
-#include <string_view>
-#include <optional>
-#include <vector>
-#include <ranges>
+
 #include <charconv>
 #include <cmath>
+#include <optional>
+#include <ranges>
+#include <string>
+#include <string_view>
+#include <vector>
 
 /**
  * @brief Represents the state of a robot's joints in radians.
  */
 struct joint_state {
     static constexpr size_t num_joints = 2;  ///< Number of joints in this state
-    double joint1_rad;  ///< First joint angle in radians
-    double joint2_rad;  ///< Second joint angle in radians
+    double joint1_rad;                       ///< First joint angle in radians
+    double joint2_rad;                       ///< Second joint angle in radians
 };
 
 /**
  * @brief Configuration parameters for the serial protocol parser.
  */
 struct protocol_config {
-    char section_delimiter = ':';   ///< Delimiter between protocol sections (header, data, checksum)
-    char angle_delimiter = ',';     ///< Delimiter between individual angle values
-    std::string_view header = "JS"; ///< Protocol header identifier
-    size_t expected_parts = 3;      ///< Expected number of sections after splitting by section_delimiter
+    char section_delimiter = ':';  ///< Delimiter between protocol sections (header, data, checksum)
+    char angle_delimiter = ',';    ///< Delimiter between individual angle values
+    std::string_view header = "JS";  ///< Protocol header identifier
+    size_t expected_parts =
+        3;  ///< Expected number of sections after splitting by section_delimiter
 };
 
 /**
@@ -49,7 +51,8 @@ uint8_t calculate_checksum(std::string_view const data) {
 constexpr std::string_view trim(std::string_view const str) {
     constexpr std::string_view whitespace = " \t\n\r\f\v";
     auto const start = str.find_first_not_of(whitespace);
-    if (start == std::string_view::npos) return "";  // All whitespace
+    if (start == std::string_view::npos)
+        return "";  // All whitespace
 
     auto trimmed = str;
     trimmed.remove_prefix(start);
@@ -70,17 +73,13 @@ constexpr std::string_view trim(std::string_view const str) {
  */
 std::vector<std::string_view> split_to_vector(std::string_view const str, char const delimiter) {
     // Create lazy view pipeline: split by delimiter, then convert subranges to string_views
-    auto split_view = str
-        | std::views::split(delimiter)
-        | std::views::transform([](auto&& rng) {
-            return std::string_view(&*rng.begin(), std::ranges::distance(rng));
-        });
+    auto split_view = str | std::views::split(delimiter) | std::views::transform([](auto&& rng) {
+                          return std::string_view(&*rng.begin(), std::ranges::distance(rng));
+                      });
 
     // Materialize the lazy view into a vector
-    return std::vector<std::string_view>(
-        std::ranges::begin(split_view),
-        std::ranges::end(split_view)
-    );
+    return std::vector<std::string_view>(std::ranges::begin(split_view),
+                                         std::ranges::end(split_view));
 }
 
 /**
@@ -94,11 +93,8 @@ std::vector<std::string_view> split_to_vector(std::string_view const str, char c
  */
 std::optional<double> parse_angle(std::string_view const angle_str) {
     double angle;
-    auto const [ptr, ec] = std::from_chars(
-        angle_str.data(),
-        angle_str.data() + angle_str.size(),
-        angle
-    );
+    auto const [ptr, ec] =
+        std::from_chars(angle_str.data(), angle_str.data() + angle_str.size(), angle);
 
     if (ec != std::errc{}) {
         return std::nullopt;
@@ -124,8 +120,7 @@ std::optional<double> parse_angle(std::string_view const angle_str) {
  * @param section_delimiter The delimiter that separates the checksum from the data
  * @return bool True if checksum is valid, false otherwise
  */
-bool validate_checksum(std::string_view const message,
-                       std::string_view const checksum_str,
+bool validate_checksum(std::string_view const message, std::string_view const checksum_str,
                        char const section_delimiter) {
     // Verify checksum format (must start with "0x")
     if (not checksum_str.starts_with("0x")) {
@@ -134,11 +129,9 @@ bool validate_checksum(std::string_view const message,
 
     // Parse the provided checksum from hex string (skip "0x" prefix)
     unsigned int provided;
-    auto const [ptr, ec] = std::from_chars(
-        checksum_str.data() + 2,
-        checksum_str.data() + checksum_str.size(),
-        provided,
-        16  // Base 16 for hexadecimal
+    auto const [ptr, ec] = std::from_chars(checksum_str.data() + 2,
+                                           checksum_str.data() + checksum_str.size(), provided,
+                                           16  // Base 16 for hexadecimal
     );
 
     if (ec != std::errc{}) {
@@ -164,7 +157,7 @@ bool validate_checksum(std::string_view const message,
  * @return std::optional<joint_state> Parsed joint state, or std::nullopt on failure
  */
 std::optional<joint_state> parse_joint_angles(std::string_view const angles_str,
-                                               char const angle_delimiter) {
+                                              char const angle_delimiter) {
     // Split angles by angle delimiter
     auto const angles = split_to_vector(angles_str, angle_delimiter);
     if (angles.size() != joint_state::num_joints) {
@@ -202,7 +195,7 @@ std::optional<joint_state> parse_joint_angles(std::string_view const angles_str,
  * @return std::optional<joint_state> Parsed joint state, or std::nullopt on any validation failure
  */
 std::optional<joint_state> read_joint_state(std::string_view const message,
-                                             protocol_config const config = {}) {
+                                            protocol_config const config = {}) {
     // Trim whitespace and validate header
     auto const msg = trim(message);
     if (not msg.starts_with(config.header) or msg.empty()) {
@@ -444,10 +437,7 @@ TEST(SerialProtocolTest, TrimWhitespace) {
 TEST(SerialProtocolTest, CustomDelimiters) {
     // GIVEN a message with custom delimiters and a custom protocol config
     std::string_view const message = "JS|1.57;-0.785|0x4E";
-    protocol_config const custom{
-        .section_delimiter = '|',
-        .angle_delimiter = ';'
-    };
+    protocol_config const custom{.section_delimiter = '|', .angle_delimiter = ';'};
 
     // WHEN parsing the message with custom config
     auto const state = read_joint_state(message, custom);

@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
+
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <ranges>
 
 /**
  * @brief Splits a string view by a delimiter into a vector of string views.
@@ -18,22 +19,18 @@ std::vector<std::string_view> split(std::string_view const str, char const delim
     // Create a lazy view pipeline: split by delimiter, then convert each subrange to string_view
     // views::split produces subranges, which we transform into string_views (no allocation yet)
     // Note: split_view must be mutable for std::ranges::begin/end
-    auto split_view = str
-        | std::views::split(delimiter)
-        | std::views::transform([](auto&& rng) {
-            // Handle empty ranges safely
-            if (std::ranges::empty(rng)) {
-                return std::string_view{};
-            }
-            return std::string_view(&*rng.begin(), std::ranges::distance(rng));
-        });
+    auto split_view = str | std::views::split(delimiter) | std::views::transform([](auto&& rng) {
+                          // Handle empty ranges safely
+                          if (std::ranges::empty(rng)) {
+                              return std::string_view{};
+                          }
+                          return std::string_view(&*rng.begin(), std::ranges::distance(rng));
+                      });
 
     // Materialize the view into a vector - this is where allocation happens
     // The vector constructor iterates the lazy view and copies the string_view objects
-    return std::vector<std::string_view>(
-        std::ranges::begin(split_view),
-        std::ranges::end(split_view)
-    );
+    return std::vector<std::string_view>(std::ranges::begin(split_view),
+                                         std::ranges::end(split_view));
 }
 
 // Tests

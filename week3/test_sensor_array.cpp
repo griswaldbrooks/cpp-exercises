@@ -1,13 +1,14 @@
 // Exercise 2: Sensor Array Statistics with std::span
 // This exercise demonstrates using std::span for generic, zero-copy operations
 
-#include <array>
-#include <vector>
-#include <span>
-#include <algorithm>
-#include <numeric>
-#include <limits>
 #include <gtest/gtest.h>
+
+#include <algorithm>
+#include <array>
+#include <limits>
+#include <numeric>
+#include <span>
+#include <vector>
 
 // Calculate the average of sensor readings
 double average(std::span<double const> const readings) {
@@ -35,10 +36,9 @@ double max_value(std::span<double const> const readings) {
 }
 
 // Count how many readings exceed a threshold
-size_t count_above_threshold(std::span<double const> const readings,
-                             double const threshold) {
+size_t count_above_threshold(std::span<double const> const readings, double const threshold) {
     return std::count_if(readings.begin(), readings.end(),
-                        [threshold](double const value) { return value > threshold; });
+                         [threshold](double const value) { return value > threshold; });
 }
 
 // Normalize readings to [0, 1] range (modifies in-place)

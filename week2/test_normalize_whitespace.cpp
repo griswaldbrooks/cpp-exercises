@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
-#include <string>
-#include <string_view>
+
 #include <algorithm>
 #include <ranges>
+#include <string>
+#include <string_view>
 
 /**
  * @brief Normalizes whitespace in a string.
@@ -20,7 +21,8 @@ std::string normalize_whitespace(std::string_view const input) {
     // Trim leading/trailing whitespace using string_view methods
     auto trimmed = input;
     auto const start = trimmed.find_first_not_of(whitespace);
-    if (start == std::string_view::npos) return "";  // All whitespace
+    if (start == std::string_view::npos)
+        return "";  // All whitespace
 
     trimmed.remove_prefix(start);
     auto const end = trimmed.find_last_not_of(whitespace);
@@ -28,14 +30,14 @@ std::string normalize_whitespace(std::string_view const input) {
 
     // Create a lazy view that normalizes all whitespace to spaces (tabs, newlines, etc.)
     // This view doesn't allocate - it computes values on-the-fly during iteration
-    auto const normalized = trimmed
-        | std::views::transform([](char const c) { return std::isspace(c) ? ' ' : c; });
+    auto const normalized =
+        trimmed | std::views::transform([](char const c) { return std::isspace(c) ? ' ' : c; });
 
     // Use unique_copy to collapse consecutive spaces and write to result
     // This is where the actual allocation happens (via back_inserter)
     std::string result;
     std::ranges::unique_copy(normalized, std::back_inserter(result),
-        [](char const a, char const b) { return a == ' ' and b == ' '; });
+                             [](char const a, char const b) { return a == ' ' and b == ' '; });
 
     return result;
 }
