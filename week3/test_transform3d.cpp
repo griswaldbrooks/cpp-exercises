@@ -283,36 +283,6 @@ public:
     }
 };
 
-// ===== Additional User-Defined Literals =====
-
-namespace literals {
-    /**
-     * @brief User-defined literal for position (creates position at origin).
-     *
-     * Usage: auto p = 0.0_pos;  // Creates position{0.0_m, 0.0_m, 0.0_m}
-     */
-    [[nodiscard]] inline position operator""_pos(long double) {
-        return position{meter{0.0}, meter{0.0}, meter{0.0}};
-    }
-
-    [[nodiscard]] inline position operator""_pos(unsigned long long) {
-        return position{meter{0.0}, meter{0.0}, meter{0.0}};
-    }
-
-    /**
-     * @brief User-defined literal for quaternion (creates identity quaternion).
-     *
-     * Usage: auto q = 0.0_quat;  // Creates identity quaternion (no rotation)
-     */
-    [[nodiscard]] inline quaternion operator""_quat(long double) {
-        return quaternion{};  // Identity quaternion
-    }
-
-    [[nodiscard]] inline quaternion operator""_quat(unsigned long long) {
-        return quaternion{};  // Identity quaternion
-    }
-}
-
 // ===== Transformation Class =====
 
 /**

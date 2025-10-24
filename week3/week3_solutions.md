@@ -5,7 +5,7 @@
 ### Overview
 
 This exercise demonstrates several modern C++ concepts:
-1. **Strong Types**: Type-safe wrappers (meter, radian, degree) preventing unit errors
+1. **Strong Types**: Type-safe wrappers (meter_t, radian, degree) preventing unit errors
 2. **Free Functions**: Non-member functions for operations (`distance_to`, `near`)
 3. **Conversion Functions**: Standalone functions for type-safe conversions
 4. **Encapsulation**: Private `std::array` storage with public accessors
@@ -15,75 +15,75 @@ This exercise demonstrates several modern C++ concepts:
 8. **Operator overloading**: Mathematical operations
 9. **Named constructors**: Alternative construction patterns
 
-### Part A: `position` Class
+### Part A: `position_t` Class
 
 **Key Concept: Const-Correctness with Accessor Overloads**
 
-The position class demonstrates a fundamental C++ pattern: providing both const and non-const accessors to the same data.
+The position_t class demonstrates a fundamental C++ pattern: providing both const and non-const accessors to the same data.
 
 ```cpp
-class position {
+class position_t {
 private:
-    std::array<meter, 3> coords_;  // Strong type storage!
+    std::array<meter_t, 3> coords_;  // Strong type storage!
 
 public:
     // Default constructor
-    position() : coords_{meter{0.0}, meter{0.0}, meter{0.0}} {}
+    position_t() : coords_{meter_t{0.0}, meter_t{0.0}, meter_t{0.0}} {}
 
-    // Parameterized constructor (accepts ONLY meter types - strong type safety!)
-    position(meter const x, meter const y, meter const z)
+    // Parameterized constructor (accepts ONLY meter_t types - strong type safety!)
+    position_t(meter_t const x, meter_t const y, meter_t const z)
         : coords_{x, y, z} {}
 
-    // CONST accessors: return const reference to meter (read-only)
-    [[nodiscard]] meter const& x() const { return coords_[0]; }
-    [[nodiscard]] meter const& y() const { return coords_[1]; }
-    [[nodiscard]] meter const& z() const { return coords_[2]; }
+    // CONST accessors: return const reference to meter_t (read-only)
+    [[nodiscard]] meter_t const& x() const { return coords_[0]; }
+    [[nodiscard]] meter_t const& y() const { return coords_[1]; }
+    [[nodiscard]] meter_t const& z() const { return coords_[2]; }
 
-    // NON-CONST accessors: return mutable reference to meter (read-write)
-    [[nodiscard]] meter& x() { return coords_[0]; }
-    [[nodiscard]] meter& y() { return coords_[1]; }
-    [[nodiscard]] meter& z() { return coords_[2]; }
+    // NON-CONST accessors: return mutable reference to meter_t (read-write)
+    [[nodiscard]] meter_t& x() { return coords_[0]; }
+    [[nodiscard]] meter_t& y() { return coords_[1]; }
+    [[nodiscard]] meter_t& z() { return coords_[2]; }
 
     // Mathematical operations (work with meter's value member)
-    [[nodiscard]] position operator+(position const& other) const {
-        return position{
-            meter{x().value + other.x().value},
-            meter{y().value + other.y().value},
-            meter{z().value + other.z().value}
+    [[nodiscard]] position_t operator+(position_t const& other) const {
+        return position_t{
+            meter_t{x().value + other.x().value},
+            meter_t{y().value + other.y().value},
+            meter_t{z().value + other.z().value}
         };
     }
 
-    [[nodiscard]] position operator-(position const& other) const {
-        return position{
-            meter{x().value - other.x().value},
-            meter{y().value - other.y().value},
-            meter{z().value - other.z().value}
+    [[nodiscard]] position_t operator-(position_t const& other) const {
+        return position_t{
+            meter_t{x().value - other.x().value},
+            meter_t{y().value - other.y().value},
+            meter_t{z().value - other.z().value}
         };
     }
 
-    [[nodiscard]] position operator*(double const scalar) const {
-        return position{
-            meter{x().value * scalar},
-            meter{y().value * scalar},
-            meter{z().value * scalar}
+    [[nodiscard]] position_t operator*(double const scalar) const {
+        return position_t{
+            meter_t{x().value * scalar},
+            meter_t{y().value * scalar},
+            meter_t{z().value * scalar}
         };
     }
 
-    [[nodiscard]] bool operator==(position const& other) const {
+    [[nodiscard]] bool operator==(position_t const& other) const {
         return coords_ == other.coords_;
     }
 };
 
-// Free functions for position operations
-[[nodiscard]] meter distance(position const& p1, position const& p2) {
+// Free functions for position_t operations
+[[nodiscard]] meter_t distance(position_t const& p1, position_t const& p2) {
     double const dx = p1.x().value - p2.x().value;
     double const dy = p1.y().value - p2.y().value;
     double const dz = p1.z().value - p2.z().value;
-    return meter{std::hypot(dx, dy, dz)};
+    return meter_t{std::hypot(dx, dy, dz)};
 }
 
-[[nodiscard]] bool near(position const& p1, position const& p2,
-                        meter const tolerance = meter{0.001}) {
+[[nodiscard]] bool near(position_t const& p1, position_t const& p2,
+                        meter_t const tolerance = meter_t{0.001}) {
     return std::abs(p1.x().value - p2.x().value) <= tolerance.value and
            std::abs(p1.y().value - p2.y().value) <= tolerance.value and
            std::abs(p1.z().value - p2.z().value) <= tolerance.value;
@@ -111,12 +111,12 @@ Using free functions `distance` and `near` (instead of member functions) provide
 ```cpp
 using namespace literals;
 
-position const origin{0.0_m, 0.0_m, 0.0_m};
-position const p1{3.0_m, 4.0_m, 0.0_m};
-position const p2{3.001_m, 4.001_m, 0.001_m};
+position_t const origin{0.0_m, 0.0_m, 0.0_m};
+position_t const p1{3.0_m, 4.0_m, 0.0_m};
+position_t const p2{3.001_m, 4.001_m, 0.001_m};
 
 // Calculate distance using free function (returns strong type!)
-meter const dist = distance(origin, p1);  // dist.value == 5.0 (3-4-5 triangle)
+meter_t const dist = distance(origin, p1);  // dist.value == 5.0 (3-4-5 triangle)
 
 // Check approximate equality with strong type tolerance
 bool const are_close = near(p1, p2, 0.01_m);     // Returns true
@@ -126,58 +126,58 @@ bool const are_equal = near(p1, p2, 0.0001_m);   // Returns false
 distance(p1, p2) == distance(p2, p1);      // Always true (symmetric)
 ```
 
-**Why Store `std::array<meter, 3>` Instead of `std::array<double, 3>`?**
+**Why Store `std::array<meter_t, 3>` Instead of `std::array<double, 3>`?**
 
 By storing strong types directly, we enforce type safety at every level:
 1. **No accidental raw doubles**: Can't accidentally assign a raw number
-2. **Type-safe comparisons**: `operator==` works correctly with meter types
+2. **Type-safe comparisons**: `operator==` works correctly with meter_t types
 3. **Clearer intent**: The storage itself documents what it contains
 
-**Note:** For `std::array<meter, 3>` to support `operator==`, the `meter` type must define `operator==`. We use defaulted comparison:
+**Note:** For `std::array<meter_t, 3>` to support `operator==`, the `meter` type must define `operator==`. We use defaulted comparison:
 
 ```cpp
-struct meter {
+struct meter_t {
     double value;
     constexpr explicit meter(double v) : value{v} {}
 
-    [[nodiscard]] constexpr bool operator==(meter const& other) const = default;
+    [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
 };
 ```
 
 **Why Const-Correctness Matters:**
 
 ```cpp
-void process_position(position const& p) {
-    meter const& val = p.x();  // OK: calls const overload, returns meter const&
+void process_position(position_t const& p) {
+    meter_t const& val = p.x();  // OK: calls const overload, returns meter_t const&
     // p.x() = 5.0_m;  // ERROR: cannot modify through const reference
 }
 
-void modify_position(position& p) {
+void modify_position(position_t& p) {
     p.x() = 10.0_m;  // OK: calls non-const overload, assigns meter
-    meter const& val = p.x();  // OK: calls non-const overload (converts to const&)
+    meter_t const& val = p.x();  // OK: calls non-const overload (converts to const&)
 }
 ```
 
-### Part B: `quaternion` Class
+### Part B: `quaternion_t` Class
 
 **Key Concept: Rule of 5**
 
-The quaternion class explicitly implements all five special member functions, demonstrating when and why to use `= default`.
+The quaternion_t class explicitly implements all five special member functions, demonstrating when and why to use `= default`.
 
 **Quaternion Components:**
 - **w** is the **real (scalar) part**
 - **x, y, z** are the **imaginary (vector) parts**
 - Quaternions represent rotations in 3D space as: `q = w + xi + yj + zk`
-- For a unit quaternion representing a rotation of angle θ around axis (ax, ay, az):
+- For a unit quaternion_t representing a rotation of angle θ around axis (ax, ay, az):
   - `w = cos(θ/2)`
   - `x = ax * sin(θ/2)`
   - `y = ay * sin(θ/2)`
   - `z = az * sin(θ/2)`
 
-**Note on Normalization:** For calculating the magnitude of a 4D quaternion, we use nested `std::hypot` calls. Since C++17 only provides up to 3-argument `hypot`, we compute `hypot(hypot(x, y, z), w)` to get the same robustness benefits for all four components.
+**Note on Normalization:** For calculating the magnitude of a 4D quaternion_t, we use nested `std::hypot` calls. Since C++17 only provides up to 3-argument `hypot`, we compute `hypot(hypot(x, y, z), w)` to get the same robustness benefits for all four components.
 
 ```cpp
-class quaternion {
+class quaternion_t {
 private:
     std::array<double, 4> components_;  // x, y, z, w
 
@@ -197,19 +197,19 @@ private:
 
 public:
     // Default constructor: identity rotation
-    quaternion() : components_{0.0, 0.0, 0.0, 1.0} {}
+    quaternion_t() : components_{0.0, 0.0, 0.0, 1.0} {}
 
     // Parameterized constructor
-    quaternion(double const x, double const y, double const z, double const w)
+    quaternion_t(double const x, double const y, double const z, double const w)
         : components_{x, y, z, w} {
         normalize();  // Always maintain unit quaternions
     }
 
-    // Named constructor: alternative construction method (accepts ONLY radian type!)
-    [[nodiscard]] static quaternion from_euler(radian const roll,
-                                               radian const pitch,
-                                               radian const yaw) {
-        // Euler to quaternion conversion (extract values from strong types)
+    // Named constructor: alternative construction method (accepts ONLY radian_t type!)
+    [[nodiscard]] static quaternion_t from_euler(radian_t const roll,
+                                               radian_t const pitch,
+                                               radian_t const yaw) {
+        // Euler to quaternion_t conversion (extract values from strong types)
         double const cy = std::cos(yaw.value * 0.5);
         double const sy = std::sin(yaw.value * 0.5);
         double const cp = std::cos(pitch.value * 0.5);
@@ -217,7 +217,7 @@ public:
         double const cr = std::cos(roll.value * 0.5);
         double const sr = std::sin(roll.value * 0.5);
 
-        return quaternion{
+        return quaternion_t{
             sr * cp * cy - cr * sp * sy,
             cr * sp * cy + sr * cp * sy,
             cr * cp * sy - sr * sp * cy,
@@ -226,13 +226,13 @@ public:
     }
 
     // Rule of 5: Explicitly defaulted special member functions
-    quaternion(quaternion const& other) = default;              // Copy constructor
-    quaternion(quaternion&& other) noexcept = default;          // Move constructor
-    quaternion& operator=(quaternion const& other) = default;    // Copy assignment
-    quaternion& operator=(quaternion&& other) noexcept = default; // Move assignment
-    ~quaternion() = default;                                     // Destructor
+    quaternion_t(quaternion_t const& other) = default;              // Copy constructor
+    quaternion_t(quaternion_t&& other) noexcept = default;          // Move constructor
+    quaternion_t& operator=(quaternion_t const& other) = default;    // Copy assignment
+    quaternion_t& operator=(quaternion_t&& other) noexcept = default; // Move assignment
+    ~quaternion_t() = default;                                     // Destructor
 
-    // Accessors (same pattern as position)
+    // Accessors (same pattern as position_t)
     [[nodiscard]] double const& x() const { return components_[0]; }
     [[nodiscard]] double const& y() const { return components_[1]; }
     [[nodiscard]] double const& z() const { return components_[2]; }
@@ -248,8 +248,8 @@ public:
     // References:
     // - https://math.stackexchange.com/questions/360286/what-does-multiplication-of-two-quaternions-give
     // - https://www.mathworks.com/help/aeroblks/quaternionmultiplication.html
-    [[nodiscard]] quaternion operator*(quaternion const& other) const {
-        return quaternion{
+    [[nodiscard]] quaternion_t operator*(quaternion_t const& other) const {
+        return quaternion_t{
             w() * other.x() + x() * other.w() + y() * other.z() - z() * other.y(),
             w() * other.y() - x() * other.z() + y() * other.w() + z() * other.x(),
             w() * other.z() + x() * other.y() - y() * other.x() + z() * other.w(),
@@ -258,11 +258,11 @@ public:
     }
 
     // Arithmetic operators for component-wise operations (needed for averaging)
-    // Note: These perform simple component-wise operations, not geometric quaternion operations
+    // Note: These perform simple component-wise operations, not geometric quaternion_t operations
     // This is a simplified approach suitable for basic sensor filtering in Exercise 2
-    // For production code, consider using SLERP or other quaternion interpolation methods
-    [[nodiscard]] quaternion operator+(quaternion const& other) const {
-        return quaternion{
+    // For production code, consider using SLERP or other quaternion_t interpolation methods
+    [[nodiscard]] quaternion_t operator+(quaternion_t const& other) const {
+        return quaternion_t{
             x() + other.x(),
             y() + other.y(),
             z() + other.z(),
@@ -270,8 +270,8 @@ public:
         };
     }
 
-    [[nodiscard]] quaternion operator-(quaternion const& other) const {
-        return quaternion{
+    [[nodiscard]] quaternion_t operator-(quaternion_t const& other) const {
+        return quaternion_t{
             x() - other.x(),
             y() - other.y(),
             z() - other.z(),
@@ -279,8 +279,8 @@ public:
         };
     }
 
-    [[nodiscard]] quaternion operator/(double const scalar) const {
-        return quaternion{
+    [[nodiscard]] quaternion_t operator/(double const scalar) const {
+        return quaternion_t{
             x() / scalar,
             y() / scalar,
             z() / scalar,
@@ -288,17 +288,17 @@ public:
         };
     }
 
-    [[nodiscard]] quaternion conjugate() const {
-        return quaternion{-x(), -y(), -z(), w()};
+    [[nodiscard]] quaternion_t conjugate() const {
+        return quaternion_t{-x(), -y(), -z(), w()};
     }
 
-    [[nodiscard]] bool operator==(quaternion const& other) const {
+    [[nodiscard]] bool operator==(quaternion_t const& other) const {
         return components_ == other.components_;
     }
 };
 
-// Free function for approximate quaternion equality
-[[nodiscard]] bool near(quaternion const& q1, quaternion const& q2,
+// Free function for approximate quaternion_t equality
+[[nodiscard]] bool near(quaternion_t const& q1, quaternion_t const& q2,
                         double const tolerance = 0.001) {
     return std::abs(q1.x() - q2.x()) <= tolerance and
            std::abs(q1.y() - q2.y()) <= tolerance and
@@ -323,31 +323,31 @@ Before we define the user-defined literals, let's add conversion functions to co
 ```cpp
 namespace literals {
     // Strong type for angles in radians
-    struct radian {
+    struct radian_t {
         double value;  // Stored in radians
         constexpr explicit radian(double v) : value{v} {}
     };
 
     // Strong type for angles in degrees
-    struct degree {
+    struct degree_t {
         double value;  // Stored in degrees!
         constexpr explicit degree(double deg) : value{deg} {}
     };
 
     // Conversion functions (work with both types)
-    [[nodiscard]] constexpr radian to_radians(degree const d) {
-        return radian{d.value * std::numbers::pi / 180.0};  // Convert degrees to radians
+    [[nodiscard]] constexpr radian_t to_radians(degree_t const d) {
+        return radian_t{d.value * std::numbers::pi / 180.0};  // Convert degrees to radians
     }
 
-    [[nodiscard]] constexpr radian to_radians(radian const r) {
+    [[nodiscard]] constexpr radian_t to_radians(radian_t const r) {
         return r;  // No conversion needed (idempotent)
     }
 
-    [[nodiscard]] constexpr degree to_degrees(radian const r) {
-        return degree{r.value * 180.0 / std::numbers::pi};  // Convert radians to degrees
+    [[nodiscard]] constexpr degree_t to_degrees(radian_t const r) {
+        return degree_t{r.value * 180.0 / std::numbers::pi};  // Convert radians to degrees
     }
 
-    [[nodiscard]] constexpr degree to_degrees(degree const d) {
+    [[nodiscard]] constexpr degree_t to_degrees(degree_t const d) {
         return d;  // No conversion needed (idempotent)
     }
 }
@@ -357,7 +357,7 @@ namespace literals {
 
 These standalone functions provide several advantages:
 1. **Consistent interface**: Same function name works for both types
-2. **Idempotent**: `to_radians(radian)` returns the same radian (useful for generic code)
+2. **Idempotent**: `to_radians(radian)` returns the same radian_t (useful for generic code)
 3. **Bidirectional**: Can convert both ways (`to_radians` and `to_degrees`)
 4. **Discoverable**: Easier to find via IDE autocomplete than member functions
 
@@ -381,52 +381,52 @@ auto const rad3 = 1.57_rad;
 auto const rad4 = to_radians(rad3);  // Returns same value
 EXPECT_DOUBLE_EQ(rad3.value, rad4.value);
 
-// Use in quaternion construction
-auto const q = quaternion::from_euler(0.0_rad, 0.0_rad, to_radians(45.0_deg));
+// Use in quaternion_t construction
+auto const q = quaternion_t::from_euler(0.0_rad, 0.0_rad, to_radians(45.0_deg));
 ```
 
 ### Part D: User-Defined Literals for Strong Types
 
 **Key Concept: Custom Suffixes for Type Safety and Readability**
 
-We define user-defined literals for our basic strong types (meter, radian, degree):
+We define user-defined literals for our basic strong types (meter_t, radian, degree):
 
 ```cpp
 namespace literals {
     // Meter literals (floating-point and integer overloads required)
-    [[nodiscard]] constexpr meter operator""_m(long double value) {
-        return meter{static_cast<double>(value)};
+    [[nodiscard]] constexpr meter_t operator""_m(long double value) {
+        return meter_t{static_cast<double>(value)};
     }
 
-    [[nodiscard]] constexpr meter operator""_m(unsigned long long value) {
-        return meter{static_cast<double>(value)};
+    [[nodiscard]] constexpr meter_t operator""_m(unsigned long long value) {
+        return meter_t{static_cast<double>(value)};
     }
 
-    // Radian literals (returns radian type)
-    [[nodiscard]] constexpr radian operator""_rad(long double value) {
-        return radian{static_cast<double>(value)};
+    // Radian literals (returns radian_t type)
+    [[nodiscard]] constexpr radian_t operator""_rad(long double value) {
+        return radian_t{static_cast<double>(value)};
     }
 
-    [[nodiscard]] constexpr radian operator""_rad(unsigned long long value) {
-        return radian{static_cast<double>(value)};
+    [[nodiscard]] constexpr radian_t operator""_rad(unsigned long long value) {
+        return radian_t{static_cast<double>(value)};
     }
 
-    // Degree literals (returns degree type - stores as degrees!)
-    [[nodiscard]] constexpr degree operator""_deg(long double value) {
-        return degree{static_cast<double>(value)};
+    // Degree literals (returns degree_t type - stores as degrees!)
+    [[nodiscard]] constexpr degree_t operator""_deg(long double value) {
+        return degree_t{static_cast<double>(value)};
     }
 
-    [[nodiscard]] constexpr degree operator""_deg(unsigned long long value) {
-        return degree{static_cast<double>(value)};
+    [[nodiscard]] constexpr degree_t operator""_deg(unsigned long long value) {
+        return degree_t{static_cast<double>(value)};
     }
 }
 
 // Usage:
 using namespace literals;
 
-position const p1{1.5_m, 2.3_m, 0.0_m};
-auto const angle = 90.0_deg;  // Creates degree type (stored as 90.0)
-auto const rot = quaternion::from_euler(0.0_rad, 0.0_rad, to_radians(angle));
+position_t const p1{1.5_m, 2.3_m, 0.0_m};
+auto const angle = 90.0_deg;  // Creates degree_t type (stored as 90.0)
+auto const rot = quaternion_t::from_euler(0.0_rad, 0.0_rad, to_radians(angle));
 ```
 
 **Benefits:**
@@ -444,7 +444,7 @@ auto const angle1 = 90.0_deg;
 auto const angle2 = 1.57_rad;
 
 // Convert as needed
-auto const rot = quaternion::from_euler(
+auto const rot = quaternion_t::from_euler(
     0.0_rad,
     0.0_rad,
     to_radians(angle1)  // Explicit, type-safe conversion
@@ -455,14 +455,14 @@ auto const angle1_in_rad = to_radians(angle1);
 auto const angle2_in_deg = to_degrees(angle2);
 ```
 
-### Part E: `transformation` Class
+### Part E: `transformation_t` Class
 
 **Key Concept: 4x4 Homogeneous Transformation Matrix**
 
-The transformation class stores a full 4x4 homogeneous transformation matrix internally, but only exposes `position` and `quaternion` types in its public interface. This demonstrates:
-- **Information hiding**: Internal representation (matrix) vs. external interface (position/quaternion)
-- **Type safety**: Users only work with position and quaternion, never raw matrix data
-- **Mathematical correctness**: Uses proper SE(3) transformation matrix representation
+The transformation_t class stores a full 4x4 homogeneous transformation_t matrix internally, but only exposes `position_t` and `quaternion_t` types in its public interface. This demonstrates:
+- **Information hiding**: Internal representation (matrix) vs. external interface (position_t/quaternion_t)
+- **Type safety**: Users only work with position_t and quaternion_t, never raw matrix data
+- **Mathematical correctness**: Uses proper SE(3) transformation_t matrix representation
 
 **4x4 Transformation Matrix Format:**
 ```
@@ -471,22 +471,22 @@ The transformation class stores a full 4x4 homogeneous transformation matrix int
 [R20 R21 R22 | Tz]
 [  0   0   0 |  1]
 ```
-Where R is the 3x3 rotation matrix (from quaternion) and T is the translation vector (from position).
+Where R is the 3x3 rotation matrix (from quaternion_t) and T is the translation vector (from position_t).
 
 ```cpp
-class transformation {
+class transformation_t {
 private:
     std::array<double, 16> matrix_;  // 4x4 matrix in row-major order
 
-    // Helper: Convert quaternion to rotation matrix and build 4x4 transform
-    static std::array<double, 16> build_matrix(position const& pos, quaternion const& rot) {
-        // Extract quaternion components
+    // Helper: Convert quaternion_t to rotation matrix and build 4x4 transform
+    static std::array<double, 16> build_matrix(position_t const& pos, quaternion_t const& rot) {
+        // Extract quaternion_t components
         double const x = rot.x();
         double const y = rot.y();
         double const z = rot.z();
         double const w = rot.w();
 
-        // Convert quaternion to rotation matrix (standard formula)
+        // Convert quaternion_t to rotation matrix (standard formula)
         double const xx = x * x, yy = y * y, zz = z * z;
         double const xy = x * y, xz = x * z, yz = y * z;
         double const wx = w * x, wy = w * y, wz = w * z;
@@ -501,39 +501,39 @@ private:
     }
 
 public:
-    // ONLY constructor: requires both position and rotation
-    transformation(position const& pos, quaternion const& rot)
+    // ONLY constructor: requires both position_t and rotation
+    transformation_t(position_t const& pos, quaternion_t const& rot)
         : matrix_{build_matrix(pos, rot)} {}
 
     // Rule of 5 (all defaulted)
-    transformation(transformation const& other) = default;
-    transformation(transformation&& other) noexcept = default;
-    transformation& operator=(transformation const& other) = default;
-    transformation& operator=(transformation&& other) noexcept = default;
-    ~transformation() = default;
+    transformation_t(transformation_t const& other) = default;
+    transformation_t(transformation_t&& other) noexcept = default;
+    transformation_t& operator=(transformation_t const& other) = default;
+    transformation_t& operator=(transformation_t&& other) noexcept = default;
+    ~transformation_t() = default;
 
-    // Extract position (from last column of matrix)
-    [[nodiscard]] position position() const {
-        return position{
-            meter{matrix_[3]},   // m03
-            meter{matrix_[7]},   // m13
-            meter{matrix_[11]}   // m23
+    // Extract position_t (from last column of matrix)
+    [[nodiscard]] position_t position_t() const {
+        return position_t{
+            meter_t{matrix_[3]},   // m03
+            meter_t{matrix_[7]},   // m13
+            meter_t{matrix_[11]}   // m23
         };
     }
 
-    // Extract quaternion (convert rotation matrix to quaternion)
-    [[nodiscard]] quaternion rotation() const {
+    // Extract quaternion_t (convert rotation matrix to quaternion_t)
+    [[nodiscard]] quaternion_t rotation() const {
         // Extract 3x3 rotation matrix
         double const m00 = matrix_[0], m01 = matrix_[1], m02 = matrix_[2];
         double const m10 = matrix_[4], m11 = matrix_[5], m12 = matrix_[6];
         double const m20 = matrix_[8], m21 = matrix_[9], m22 = matrix_[10];
 
-        // Convert rotation matrix to quaternion (standard algorithm)
+        // Convert rotation matrix to quaternion_t (standard algorithm)
         double const trace = m00 + m11 + m22;
 
         if (trace > 0) {
             double const s = 0.5 / std::sqrt(trace + 1.0);
-            return quaternion{
+            return quaternion_t{
                 (m21 - m12) * s,
                 (m02 - m20) * s,
                 (m10 - m01) * s,
@@ -541,7 +541,7 @@ public:
             };
         } else if (m00 > m11 && m00 > m22) {
             double const s = 2.0 * std::sqrt(1.0 + m00 - m11 - m22);
-            return quaternion{
+            return quaternion_t{
                 0.25 * s,
                 (m01 + m10) / s,
                 (m02 + m20) / s,
@@ -549,7 +549,7 @@ public:
             };
         } else if (m11 > m22) {
             double const s = 2.0 * std::sqrt(1.0 + m11 - m00 - m22);
-            return quaternion{
+            return quaternion_t{
                 (m01 + m10) / s,
                 0.25 * s,
                 (m12 + m21) / s,
@@ -557,7 +557,7 @@ public:
             };
         } else {
             double const s = 2.0 * std::sqrt(1.0 + m22 - m00 - m11);
-            return quaternion{
+            return quaternion_t{
                 (m02 + m20) / s,
                 (m12 + m21) / s,
                 0.25 * s,
@@ -567,7 +567,7 @@ public:
     }
 
     // Transformation composition (4x4 matrix multiplication)
-    [[nodiscard]] transformation operator*(transformation const& other) const {
+    [[nodiscard]] transformation_t operator*(transformation_t const& other) const {
         std::array<double, 16> result{};
 
         // Multiply: result = this->matrix_ * other.matrix_
@@ -581,38 +581,38 @@ public:
             }
         }
 
-        // Create transformation from resulting matrix
-        transformation temp{position{}, quaternion{}};
+        // Create transformation_t from resulting matrix
+        transformation_t temp{position_t{}, quaternion_t{}};
         temp.matrix_ = result;
         return temp;
     }
 
     // Apply additional rotation to this transformation
-    // Equivalent to: *this * transformation{position{}, rotation}
-    [[nodiscard]] transformation operator*(quaternion const& rotation) const {
-        // Create a rotation-only transformation (identity position)
-        transformation const rot_tf{position{meter{0}, meter{0}, meter{0}}, rotation};
+    // Equivalent to: *this * transformation_t{position_t{}, rotation}
+    [[nodiscard]] transformation_t operator*(quaternion_t const& rotation) const {
+        // Create a rotation-only transformation_t (identity position_t)
+        transformation_t const rot_tf{position_t{meter_t{0}, meter_t{0}, meter_t{0}}, rotation};
         // Compose: apply rotation after this transformation
         return *this * rot_tf;
     }
 
-    // Transform a position (apply 4x4 matrix to homogeneous coordinate)
-    [[nodiscard]] position operator*(position const& point) const {
+    // Transform a position_t (apply 4x4 matrix to homogeneous coordinate)
+    [[nodiscard]] position_t operator*(position_t const& point) const {
         // Treat point as [x, y, z, 1] in homogeneous coordinates
         double const x = point.x().value;
         double const y = point.y().value;
         double const z = point.z().value;
 
         // Matrix-vector multiplication
-        return position{
-            meter{matrix_[0]*x + matrix_[1]*y + matrix_[2]*z + matrix_[3]},
-            meter{matrix_[4]*x + matrix_[5]*y + matrix_[6]*z + matrix_[7]},
-            meter{matrix_[8]*x + matrix_[9]*y + matrix_[10]*z + matrix_[11]}
+        return position_t{
+            meter_t{matrix_[0]*x + matrix_[1]*y + matrix_[2]*z + matrix_[3]},
+            meter_t{matrix_[4]*x + matrix_[5]*y + matrix_[6]*z + matrix_[7]},
+            meter_t{matrix_[8]*x + matrix_[9]*y + matrix_[10]*z + matrix_[11]}
         };
     }
 
-    // Inverse transformation (for SE(3): [R^T | -R^T*t])
-    [[nodiscard]] transformation inverse() const {
+    // Inverse transformation_t (for SE(3): [R^T | -R^T*t])
+    [[nodiscard]] transformation_t inverse() const {
         // Extract rotation and translation
         double const r00 = matrix_[0], r01 = matrix_[1], r02 = matrix_[2];
         double const r10 = matrix_[4], r11 = matrix_[5], r12 = matrix_[6];
@@ -631,42 +631,42 @@ public:
             0.0, 0.0, 0.0, 1.0       // Row 3
         };
 
-        transformation result{position{}, quaternion{}};
+        transformation_t result{position_t{}, quaternion_t{}};
         result.matrix_ = inv_matrix;
         return result;
     }
 
-    [[nodiscard]] bool operator==(transformation const& other) const {
+    [[nodiscard]] bool operator==(transformation_t const& other) const {
         return matrix_ == other.matrix_;
     }
 };
 
-// Free function for approximate transformation equality
-[[nodiscard]] bool near(transformation const& tf1, transformation const& tf2,
-                        meter const pos_tolerance = meter{0.001},
+// Free function for approximate transformation_t equality
+[[nodiscard]] bool near(transformation_t const& tf1, transformation_t const& tf2,
+                        meter_t const pos_tolerance = meter_t{0.001},
                         double const rot_tolerance = 0.001) {
-    return near(tf1.position(), tf2.position(), pos_tolerance) and
+    return near(tf1.position_t(), tf2.position_t(), pos_tolerance) and
            near(tf1.rotation(), tf2.rotation(), rot_tolerance);
 }
 ```
 
 **Why Store as 4x4 Matrix?**
 
-1. **Mathematically correct**: Proper homogeneous transformation representation used in robotics/graphics
+1. **Mathematically correct**: Proper homogeneous transformation_t representation used in robotics/graphics
 2. **Efficient composition**: Matrix multiplication is the natural way to compose transformations
 3. **Industry standard**: SE(3) transformations are universally represented this way
-4. **Encapsulation**: Users work with position/quaternion (intuitive) while internally using matrices (efficient)
+4. **Encapsulation**: Users work with position_t/quaternion_t (intuitive) while internally using matrices (efficient)
 
 **Why No Default Constructor?**
 
 ```cpp
 using namespace literals;
 
-// transformation tf;  // ERROR: no default constructor
-// This is intentional! A transformation without both position
+// transformation_t tf;  // ERROR: no default constructor
+// This is intentional! A transformation_t without both position
 // and rotation is meaningless in our domain.
 
-transformation const tf{position{1.0_m, 2.0_m, 3.0_m}, quaternion{}};  // OK: explicit
+transformation_t const tf{position_t{1.0_m, 2.0_m, 3.0_m}, quaternion_t{}};  // OK: explicit
 ```
 
 ### Complete Usage Example
@@ -675,35 +675,35 @@ transformation const tf{position{1.0_m, 2.0_m, 3.0_m}, quaternion{}};  // OK: ex
 using namespace literals;
 
 // Robot base at origin
-transformation const base{
-    position{0.0_m, 0.0_m, 0.0_m},
-    quaternion{}
+transformation_t const base{
+    position_t{0.0_m, 0.0_m, 0.0_m},
+    quaternion_t{}
 };
 
 // First joint: moves up 1 meter
-transformation const joint1{
-    position{0.0_m, 0.0_m, 1.0_m},
-    quaternion{}
+transformation_t const joint1{
+    position_t{0.0_m, 0.0_m, 1.0_m},
+    quaternion_t{}
 };
 
 // Second joint: extends forward 0.5m, rotates 45 degrees
-transformation const joint2{
-    position{0.5_m, 0.0_m, 0.0_m},
-    quaternion::from_euler(0.0_rad, 0.0_rad, to_radians(45.0_deg))
+transformation_t const joint2{
+    position_t{0.5_m, 0.0_m, 0.0_m},
+    quaternion_t::from_euler(0.0_rad, 0.0_rad, to_radians(45.0_deg))
 };
 
 // Compose transformations: base -> joint1 -> joint2
 auto const end_effector = base * joint1 * joint2;
 
 // Query end effector position
-auto const pos = end_effector.position();
+auto const pos = end_effector.position_t();
 std::cout << std::format("End effector at: ({}, {}, {})\n",
                          pos.x(), pos.y(), pos.z());
 
 // Example using conversion functions
 auto const angle_deg = 180.0_deg;
 auto const angle_rad = to_radians(angle_deg);
-auto const rotation = quaternion::from_euler(angle_rad, 0.0_rad, 0.0_rad);
+auto const rotation = quaternion_t::from_euler(angle_rad, 0.0_rad, 0.0_rad);
 ```
 
 ---
