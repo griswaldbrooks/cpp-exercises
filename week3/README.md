@@ -24,18 +24,72 @@ namespace literals {
     struct meter_t {
         double value;
         constexpr explicit meter_t(double v) : value{v} {}
+
+        // Arithmetic operators
+        [[nodiscard]] constexpr meter_t operator+(meter_t const& other) const {
+            return meter_t{value + other.value};
+        }
+        [[nodiscard]] constexpr meter_t operator-(meter_t const& other) const {
+            return meter_t{value - other.value};
+        }
+        [[nodiscard]] constexpr meter_t operator*(double scalar) const {
+            return meter_t{value * scalar};
+        }
+        [[nodiscard]] constexpr meter_t operator/(double scalar) const {
+            return meter_t{value / scalar};
+        }
+
+        // Comparison operators (using spaceship operator)
+        [[nodiscard]] constexpr auto operator<=>(meter_t const& other) const = default;
+        [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
     };
 
     // Strong type for angles in radians
     struct radian_t {
         double value;
         constexpr explicit radian_t(double v) : value{v} {}
+
+        // Arithmetic operators
+        [[nodiscard]] constexpr radian_t operator+(radian_t const& other) const {
+            return radian_t{value + other.value};
+        }
+        [[nodiscard]] constexpr radian_t operator-(radian_t const& other) const {
+            return radian_t{value - other.value};
+        }
+        [[nodiscard]] constexpr radian_t operator*(double scalar) const {
+            return radian_t{value * scalar};
+        }
+        [[nodiscard]] constexpr radian_t operator/(double scalar) const {
+            return radian_t{value / scalar};
+        }
+
+        // Comparison operators
+        [[nodiscard]] constexpr auto operator<=>(radian_t const& other) const = default;
+        [[nodiscard]] constexpr bool operator==(radian_t const& other) const = default;
     };
 
     // Strong type for angles in degrees
     struct degree_t {
         double value;
         constexpr explicit degree_t(double deg) : value{deg} {}
+
+        // Arithmetic operators
+        [[nodiscard]] constexpr degree_t operator+(degree_t const& other) const {
+            return degree_t{value + other.value};
+        }
+        [[nodiscard]] constexpr degree_t operator-(degree_t const& other) const {
+            return degree_t{value - other.value};
+        }
+        [[nodiscard]] constexpr degree_t operator*(double scalar) const {
+            return degree_t{value * scalar};
+        }
+        [[nodiscard]] constexpr degree_t operator/(double scalar) const {
+            return degree_t{value / scalar};
+        }
+
+        // Comparison operators
+        [[nodiscard]] constexpr auto operator<=>(degree_t const& other) const = default;
+        [[nodiscard]] constexpr bool operator==(degree_t const& other) const = default;
     };
 
     // Conversion functions (work with both types)
@@ -354,18 +408,60 @@ namespace literals {
     struct meter_t {
         double value;
         constexpr explicit meter_t(double v) : value{v} {}
+
+        [[nodiscard]] constexpr meter_t operator+(meter_t const& other) const {
+            return meter_t{value + other.value};
+        }
+        [[nodiscard]] constexpr meter_t operator-(meter_t const& other) const {
+            return meter_t{value - other.value};
+        }
+        [[nodiscard]] constexpr meter_t operator*(double scalar) const {
+            return meter_t{value * scalar};
+        }
+        [[nodiscard]] constexpr meter_t operator/(double scalar) const {
+            return meter_t{value / scalar};
+        }
+        [[nodiscard]] constexpr auto operator<=>(meter_t const& other) const = default;
         [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
     };
 
     struct radian_t {
         double value;
         constexpr explicit radian_t(double v) : value{v} {}
+
+        [[nodiscard]] constexpr radian_t operator+(radian_t const& other) const {
+            return radian_t{value + other.value};
+        }
+        [[nodiscard]] constexpr radian_t operator-(radian_t const& other) const {
+            return radian_t{value - other.value};
+        }
+        [[nodiscard]] constexpr radian_t operator*(double scalar) const {
+            return radian_t{value * scalar};
+        }
+        [[nodiscard]] constexpr radian_t operator/(double scalar) const {
+            return radian_t{value / scalar};
+        }
+        [[nodiscard]] constexpr auto operator<=>(radian_t const& other) const = default;
         [[nodiscard]] constexpr bool operator==(radian_t const& other) const = default;
     };
 
     struct degree_t {
         double value;
         constexpr explicit degree_t(double deg) : value{deg} {}
+
+        [[nodiscard]] constexpr degree_t operator+(degree_t const& other) const {
+            return degree_t{value + other.value};
+        }
+        [[nodiscard]] constexpr degree_t operator-(degree_t const& other) const {
+            return degree_t{value - other.value};
+        }
+        [[nodiscard]] constexpr degree_t operator*(double scalar) const {
+            return degree_t{value * scalar};
+        }
+        [[nodiscard]] constexpr degree_t operator/(double scalar) const {
+            return degree_t{value / scalar};
+        }
+        [[nodiscard]] constexpr auto operator<=>(degree_t const& other) const = default;
         [[nodiscard]] constexpr bool operator==(degree_t const& other) const = default;
     };
 
@@ -618,25 +714,21 @@ int main() {
    - Dual accessor overloads: `double const& x() const` and `double& x()`
    - Providing read-only and read-write access safely
 
-5. **Rule of 5**
-   - Copy constructor, move constructor, copy/move assignment, destructor
-   - When to use `= default` vs explicit implementation
-
-6. **Advanced Construction Patterns**
-   - Named constructors: `quaternion::from_euler()`
+5. **Advanced Construction Patterns**
+   - Named constructors: `quaternion_t::from_euler()`
    - Preventing default construction when semantically meaningless
    - Constructor invariants (quaternion normalization)
 
-7. **Operator Overloading**
+6. **Operator Overloading**
    - Mathematical operators: `+`, `-`, `*`
    - Comparison operators: `==`
 
-8. **Free Functions** (⭐ Important!)
-   - `distance(position, position)` - Calculate distance between positions
-   - `near(position, position, meter)` - Approximate equality comparison
+7. **Free Functions** (⭐ Important!)
+   - `distance(position_t, position_t)` - Calculate distance between positions
+   - `near(position_t, position_t, meter_t)` - Approximate equality comparison
    - Free functions provide symmetry and better composability
 
-9. **Modern C++ Features**
+8. **Modern C++ Features**
    - `[[nodiscard]]` attribute
    - `noexcept` on move operations
    - `constexpr` for compile-time evaluation
@@ -678,7 +770,7 @@ std::vector<T> sliding_window_average(std::span<T const> values, size_t window_s
 using namespace literals;
 
 // Full 360-degree LIDAR scan (one reading per degree)
-std::array<meter, 360> lidar_scan = { /* ... 360 distance readings ... */ };
+std::array<meter_t, 360> lidar_scan = { /* ... 360 distance readings ... */ };
 
 // Use span to analyze just the front 90 degrees (indices 0-89)
 auto const front_readings = std::span{lidar_scan}.subspan(0, 90);

@@ -5,15 +5,14 @@
 ### Overview
 
 This exercise demonstrates several modern C++ concepts:
-1. **Strong Types**: Type-safe wrappers (meter_t, radian, degree) preventing unit errors
-2. **Free Functions**: Non-member functions for operations (`distance_to`, `near`)
+1. **Strong Types**: Type-safe wrappers (meter_t, radian_t, degree_t) preventing unit errors
+2. **Free Functions**: Non-member functions for operations (`distance`, `near`)
 3. **Conversion Functions**: Standalone functions for type-safe conversions
 4. **Encapsulation**: Private `std::array` storage with public accessors
 5. **Const-correctness**: Separate const/non-const overloads
-6. **Rule of 5**: Explicit special member functions
-7. **User-defined literals**: Custom suffixes for units
-8. **Operator overloading**: Mathematical operations
-9. **Named constructors**: Alternative construction patterns
+6. **User-defined literals**: Custom suffixes for units
+7. **Operator overloading**: Mathematical operations
+8. **Named constructors**: Alternative construction patterns
 
 ### Part A: `position_t` Class
 
@@ -138,8 +137,24 @@ By storing strong types directly, we enforce type safety at every level:
 ```cpp
 struct meter_t {
     double value;
-    constexpr explicit meter(double v) : value{v} {}
+    constexpr explicit meter_t(double v) : value{v} {}
 
+    // Arithmetic operators
+    [[nodiscard]] constexpr meter_t operator+(meter_t const& other) const {
+        return meter_t{value + other.value};
+    }
+    [[nodiscard]] constexpr meter_t operator-(meter_t const& other) const {
+        return meter_t{value - other.value};
+    }
+    [[nodiscard]] constexpr meter_t operator*(double scalar) const {
+        return meter_t{value * scalar};
+    }
+    [[nodiscard]] constexpr meter_t operator/(double scalar) const {
+        return meter_t{value / scalar};
+    }
+
+    // Comparison operators (using spaceship operator)
+    [[nodiscard]] constexpr auto operator<=>(meter_t const& other) const = default;
     [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
 };
 ```
@@ -325,13 +340,49 @@ namespace literals {
     // Strong type for angles in radians
     struct radian_t {
         double value;  // Stored in radians
-        constexpr explicit radian(double v) : value{v} {}
+        constexpr explicit radian_t(double v) : value{v} {}
+
+        // Arithmetic operators
+        [[nodiscard]] constexpr radian_t operator+(radian_t const& other) const {
+            return radian_t{value + other.value};
+        }
+        [[nodiscard]] constexpr radian_t operator-(radian_t const& other) const {
+            return radian_t{value - other.value};
+        }
+        [[nodiscard]] constexpr radian_t operator*(double scalar) const {
+            return radian_t{value * scalar};
+        }
+        [[nodiscard]] constexpr radian_t operator/(double scalar) const {
+            return radian_t{value / scalar};
+        }
+
+        // Comparison operators
+        [[nodiscard]] constexpr auto operator<=>(radian_t const& other) const = default;
+        [[nodiscard]] constexpr bool operator==(radian_t const& other) const = default;
     };
 
     // Strong type for angles in degrees
     struct degree_t {
         double value;  // Stored in degrees!
-        constexpr explicit degree(double deg) : value{deg} {}
+        constexpr explicit degree_t(double deg) : value{deg} {}
+
+        // Arithmetic operators
+        [[nodiscard]] constexpr degree_t operator+(degree_t const& other) const {
+            return degree_t{value + other.value};
+        }
+        [[nodiscard]] constexpr degree_t operator-(degree_t const& other) const {
+            return degree_t{value - other.value};
+        }
+        [[nodiscard]] constexpr degree_t operator*(double scalar) const {
+            return degree_t{value * scalar};
+        }
+        [[nodiscard]] constexpr degree_t operator/(double scalar) const {
+            return degree_t{value / scalar};
+        }
+
+        // Comparison operators
+        [[nodiscard]] constexpr auto operator<=>(degree_t const& other) const = default;
+        [[nodiscard]] constexpr bool operator==(degree_t const& other) const = default;
     };
 
     // Conversion functions (work with both types)

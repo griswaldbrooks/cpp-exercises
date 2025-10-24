@@ -15,6 +15,22 @@ namespace literals {
         double value;
         constexpr explicit meter_t(double v) : value{v} {}
 
+        // Arithmetic operators
+        [[nodiscard]] constexpr meter_t operator+(meter_t const& other) const {
+            return meter_t{value + other.value};
+        }
+        [[nodiscard]] constexpr meter_t operator-(meter_t const& other) const {
+            return meter_t{value - other.value};
+        }
+        [[nodiscard]] constexpr meter_t operator*(double scalar) const {
+            return meter_t{value * scalar};
+        }
+        [[nodiscard]] constexpr meter_t operator/(double scalar) const {
+            return meter_t{value / scalar};
+        }
+
+        // Comparison operators
+        [[nodiscard]] constexpr auto operator<=>(meter_t const& other) const = default;
         [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
     };
 
@@ -23,6 +39,22 @@ namespace literals {
         double value;
         constexpr explicit radian_t(double v) : value{v} {}
 
+        // Arithmetic operators
+        [[nodiscard]] constexpr radian_t operator+(radian_t const& other) const {
+            return radian_t{value + other.value};
+        }
+        [[nodiscard]] constexpr radian_t operator-(radian_t const& other) const {
+            return radian_t{value - other.value};
+        }
+        [[nodiscard]] constexpr radian_t operator*(double scalar) const {
+            return radian_t{value * scalar};
+        }
+        [[nodiscard]] constexpr radian_t operator/(double scalar) const {
+            return radian_t{value / scalar};
+        }
+
+        // Comparison operators
+        [[nodiscard]] constexpr auto operator<=>(radian_t const& other) const = default;
         [[nodiscard]] constexpr bool operator==(radian_t const& other) const = default;
     };
 
@@ -31,6 +63,22 @@ namespace literals {
         double value;  // Stored in degrees!
         constexpr explicit degree_t(double deg) : value{deg} {}
 
+        // Arithmetic operators
+        [[nodiscard]] constexpr degree_t operator+(degree_t const& other) const {
+            return degree_t{value + other.value};
+        }
+        [[nodiscard]] constexpr degree_t operator-(degree_t const& other) const {
+            return degree_t{value - other.value};
+        }
+        [[nodiscard]] constexpr degree_t operator*(double scalar) const {
+            return degree_t{value * scalar};
+        }
+        [[nodiscard]] constexpr degree_t operator/(double scalar) const {
+            return degree_t{value / scalar};
+        }
+
+        // Comparison operators
+        [[nodiscard]] constexpr auto operator<=>(degree_t const& other) const = default;
         [[nodiscard]] constexpr bool operator==(degree_t const& other) const = default;
     };
 
