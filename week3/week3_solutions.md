@@ -43,28 +43,28 @@ public:
     [[nodiscard]] meter_t& y() { return coords_[1]; }
     [[nodiscard]] meter_t& z() { return coords_[2]; }
 
-    // Mathematical operations (work with meter's value member)
+    // Mathematical operations (use meter_t's operators)
     [[nodiscard]] position_t operator+(position_t const& other) const {
         return position_t{
-            meter_t{x().value + other.x().value},
-            meter_t{y().value + other.y().value},
-            meter_t{z().value + other.z().value}
+            x() + other.x(),
+            y() + other.y(),
+            z() + other.z()
         };
     }
 
     [[nodiscard]] position_t operator-(position_t const& other) const {
         return position_t{
-            meter_t{x().value - other.x().value},
-            meter_t{y().value - other.y().value},
-            meter_t{z().value - other.z().value}
+            x() - other.x(),
+            y() - other.y(),
+            z() - other.z()
         };
     }
 
     [[nodiscard]] position_t operator*(double const scalar) const {
         return position_t{
-            meter_t{x().value * scalar},
-            meter_t{y().value * scalar},
-            meter_t{z().value * scalar}
+            x() * scalar,
+            y() * scalar,
+            z() * scalar
         };
     }
 
@@ -75,17 +75,17 @@ public:
 
 // Free functions for position_t operations
 [[nodiscard]] meter_t distance(position_t const& p1, position_t const& p2) {
-    double const dx = p1.x().value - p2.x().value;
-    double const dy = p1.y().value - p2.y().value;
-    double const dz = p1.z().value - p2.z().value;
+    double const dx = (p1.x() - p2.x()).value;
+    double const dy = (p1.y() - p2.y()).value;
+    double const dz = (p1.z() - p2.z()).value;
     return meter_t{std::hypot(dx, dy, dz)};
 }
 
 [[nodiscard]] bool near(position_t const& p1, position_t const& p2,
                         meter_t const tolerance = meter_t{0.001}) {
-    return std::abs(p1.x().value - p2.x().value) <= tolerance.value and
-           std::abs(p1.y().value - p2.y().value) <= tolerance.value and
-           std::abs(p1.z().value - p2.z().value) <= tolerance.value;
+    return std::abs((p1.x() - p2.x()).value) <= tolerance.value and
+           std::abs((p1.y() - p2.y()).value) <= tolerance.value and
+           std::abs((p1.z() - p2.z()).value) <= tolerance.value;
 }
 ```
 
