@@ -174,9 +174,7 @@ void modify_position(position_t& p) {
 
 ### Part B: `quaternion_t` Class
 
-**Key Concept: Rule of 5**
-
-The quaternion_t class explicitly implements all five special member functions, demonstrating when and why to use `= default`.
+**Key Concept: Quaternion Representation**
 
 **Quaternion Components:**
 - **w** is the **real (scalar) part**
@@ -238,13 +236,6 @@ public:
             cr * cp * cy + sr * sp * sy
         };
     }
-
-    // Rule of 5: Explicitly defaulted special member functions
-    quaternion_t(quaternion_t const& other) = default;              // Copy constructor
-    quaternion_t(quaternion_t&& other) noexcept = default;          // Move constructor
-    quaternion_t& operator=(quaternion_t const& other) = default;    // Copy assignment
-    quaternion_t& operator=(quaternion_t&& other) noexcept = default; // Move assignment
-    ~quaternion_t() = default;                                     // Destructor
 
     // Accessors (same pattern as position_t)
     [[nodiscard]] double const& x() const { return components_[0]; }
@@ -382,21 +373,13 @@ namespace literals {
         [[nodiscard]] constexpr auto operator<=>(degree_t const& other) const = default;
     };
 
-    // Conversion functions (work with both types)
+    // Conversion functions
     [[nodiscard]] constexpr radian_t to_radians(degree_t const d) {
         return radian_t{d.value * std::numbers::pi / 180.0};  // Convert degrees to radians
     }
 
-    [[nodiscard]] constexpr radian_t to_radians(radian_t const r) {
-        return r;  // No conversion needed (idempotent)
-    }
-
     [[nodiscard]] constexpr degree_t to_degrees(radian_t const r) {
         return degree_t{r.value * 180.0 / std::numbers::pi};  // Convert radians to degrees
-    }
-
-    [[nodiscard]] constexpr degree_t to_degrees(degree_t const d) {
-        return d;  // No conversion needed (idempotent)
     }
 }
 ```
@@ -404,10 +387,10 @@ namespace literals {
 **Why Conversion Functions?**
 
 These standalone functions provide several advantages:
-1. **Consistent interface**: Same function name works for both types
-2. **Idempotent**: `to_radians(radian)` returns the same radian_t (useful for generic code)
-3. **Bidirectional**: Can convert both ways (`to_radians` and `to_degrees`)
-4. **Discoverable**: Easier to find via IDE autocomplete than member functions
+1. **Type-safe conversion**: Explicit conversion between degree_t and radian_t
+2. **Bidirectional**: Can convert both ways (`to_radians` and `to_degrees`)
+3. **Discoverable**: Easier to find via IDE autocomplete than member functions
+4. **Clear intent**: Makes conversion explicit in code
 
 **Usage Examples:**
 
@@ -423,11 +406,6 @@ EXPECT_NEAR(rad.value, std::numbers::pi / 2.0, 0.001);
 auto const rad2 = 3.14159_rad;
 auto const deg2 = to_degrees(rad2);
 EXPECT_NEAR(deg2.value, 180.0, 0.1);  // Now stored as degrees!
-
-// Idempotent operations (useful for generic code)
-auto const rad3 = 1.57_rad;
-auto const rad4 = to_radians(rad3);  // Returns same value
-EXPECT_DOUBLE_EQ(rad3.value, rad4.value);
 
 // Use in quaternion_t construction
 auto const q = quaternion_t::from_euler(0.0_rad, 0.0_rad, to_radians(45.0_deg));
@@ -561,7 +539,7 @@ public:
     ~transformation_t() = default;
 
     // Extract position_t (from last column of matrix)
-    [[nodiscard]] position_t position_t() const {
+    [[nodiscard]] position_t position() const {
         return position_t{
             meter_t{matrix_[3]},   // m03
             meter_t{matrix_[7]},   // m13
