@@ -11,131 +11,131 @@
 
 namespace literals {
     // Strong type for distances (meters)
-    struct meter {
+    struct meter_t {
         double value;
-        constexpr explicit meter(double v) : value{v} {}
+        constexpr explicit meter_t(double v) : value{v} {}
 
-        [[nodiscard]] constexpr bool operator==(meter const& other) const = default;
+        [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
     };
 
     // Strong type for angles in radians
-    struct radian {
+    struct radian_t {
         double value;
-        constexpr explicit radian(double v) : value{v} {}
+        constexpr explicit radian_t(double v) : value{v} {}
 
-        [[nodiscard]] constexpr bool operator==(radian const& other) const = default;
+        [[nodiscard]] constexpr bool operator==(radian_t const& other) const = default;
     };
 
     // Strong type for angles in degrees
-    struct degree {
+    struct degree_t {
         double value;  // Stored in degrees!
-        constexpr explicit degree(double deg) : value{deg} {}
+        constexpr explicit degree_t(double deg) : value{deg} {}
 
-        [[nodiscard]] constexpr bool operator==(degree const& other) const = default;
+        [[nodiscard]] constexpr bool operator==(degree_t const& other) const = default;
     };
 
     // Conversion functions (work with both types)
-    [[nodiscard]] constexpr radian to_radians(degree const d) {
-        return radian{d.value * std::numbers::pi / 180.0};
+    [[nodiscard]] constexpr radian_t to_radians(degree_t const d) {
+        return radian_t{d.value * std::numbers::pi / 180.0};
     }
 
-    [[nodiscard]] constexpr radian to_radians(radian const r) {
+    [[nodiscard]] constexpr radian_t to_radians(radian_t const r) {
         return r;  // No conversion needed
     }
 
-    [[nodiscard]] constexpr degree to_degrees(radian const r) {
-        return degree{r.value * 180.0 / std::numbers::pi};
+    [[nodiscard]] constexpr degree_t to_degrees(radian_t const r) {
+        return degree_t{r.value * 180.0 / std::numbers::pi};
     }
 
-    [[nodiscard]] constexpr degree to_degrees(degree const d) {
+    [[nodiscard]] constexpr degree_t to_degrees(degree_t const d) {
         return d;  // No conversion needed
     }
 
     // User-defined literals
-    [[nodiscard]] constexpr meter operator""_m(long double v) {
-        return meter{static_cast<double>(v)};
+    [[nodiscard]] constexpr meter_t operator""_m(long double v) {
+        return meter_t{static_cast<double>(v)};
     }
 
-    [[nodiscard]] constexpr meter operator""_m(unsigned long long v) {
-        return meter{static_cast<double>(v)};
+    [[nodiscard]] constexpr meter_t operator""_m(unsigned long long v) {
+        return meter_t{static_cast<double>(v)};
     }
 
-    [[nodiscard]] constexpr radian operator""_rad(long double v) {
-        return radian{static_cast<double>(v)};
+    [[nodiscard]] constexpr radian_t operator""_rad(long double v) {
+        return radian_t{static_cast<double>(v)};
     }
 
-    [[nodiscard]] constexpr radian operator""_rad(unsigned long long v) {
-        return radian{static_cast<double>(v)};
+    [[nodiscard]] constexpr radian_t operator""_rad(unsigned long long v) {
+        return radian_t{static_cast<double>(v)};
     }
 
-    [[nodiscard]] constexpr degree operator""_deg(long double v) {
-        return degree{static_cast<double>(v)};
+    [[nodiscard]] constexpr degree_t operator""_deg(long double v) {
+        return degree_t{static_cast<double>(v)};
     }
 
-    [[nodiscard]] constexpr degree operator""_deg(unsigned long long v) {
-        return degree{static_cast<double>(v)};
+    [[nodiscard]] constexpr degree_t operator""_deg(unsigned long long v) {
+        return degree_t{static_cast<double>(v)};
     }
 }
 
 // ===== Position Class =====
 
 /**
- * @brief Represents a 3D position in space.
+ * @brief Represents a 3D position_t in space.
  *
  * Stores coordinates privately as std::array and provides accessor methods
  * with const and non-const overloads to demonstrate const-correctness.
  */
-class position {
+class position_t {
 private:
-    std::array<literals::meter, 3> coords_;
+    std::array<literals::meter_t, 3> coords_;
 
 public:
     // Default constructor: origin
-    position() : coords_{literals::meter{0.0}, literals::meter{0.0}, literals::meter{0.0}} {}
+    position_t() : coords_{literals::meter_t{0.0}, literals::meter_t{0.0}, literals::meter_t{0.0}} {}
 
     // Construct from strong types (meters only!)
-    position(literals::meter const x, literals::meter const y, literals::meter const z)
+    position_t(literals::meter_t const x, literals::meter_t const y, literals::meter_t const z)
         : coords_{x, y, z} {}
 
     // Accessors (const overloads return const reference)
-    [[nodiscard]] literals::meter const& x() const { return coords_[0]; }
-    [[nodiscard]] literals::meter const& y() const { return coords_[1]; }
-    [[nodiscard]] literals::meter const& z() const { return coords_[2]; }
+    [[nodiscard]] literals::meter_t const& x() const { return coords_[0]; }
+    [[nodiscard]] literals::meter_t const& y() const { return coords_[1]; }
+    [[nodiscard]] literals::meter_t const& z() const { return coords_[2]; }
 
     // Mutators (non-const overloads return non-const reference)
-    [[nodiscard]] literals::meter& x() { return coords_[0]; }
-    [[nodiscard]] literals::meter& y() { return coords_[1]; }
-    [[nodiscard]] literals::meter& z() { return coords_[2]; }
+    [[nodiscard]] literals::meter_t& x() { return coords_[0]; }
+    [[nodiscard]] literals::meter_t& y() { return coords_[1]; }
+    [[nodiscard]] literals::meter_t& z() { return coords_[2]; }
 
     // Equality comparison
-    [[nodiscard]] bool operator==(position const& other) const {
+    [[nodiscard]] bool operator==(position_t const& other) const {
         return coords_ == other.coords_;
     }
 
     // Vector addition
-    [[nodiscard]] position operator+(position const& other) const {
-        return position{
-            literals::meter{x().value + other.x().value},
-            literals::meter{y().value + other.y().value},
-            literals::meter{z().value + other.z().value}
+    [[nodiscard]] position_t operator+(position_t const& other) const {
+        return position_t{
+            literals::meter_t{x().value + other.x().value},
+            literals::meter_t{y().value + other.y().value},
+            literals::meter_t{z().value + other.z().value}
         };
     }
 
     // Vector subtraction
-    [[nodiscard]] position operator-(position const& other) const {
-        return position{
-            literals::meter{x().value - other.x().value},
-            literals::meter{y().value - other.y().value},
-            literals::meter{z().value - other.z().value}
+    [[nodiscard]] position_t operator-(position_t const& other) const {
+        return position_t{
+            literals::meter_t{x().value - other.x().value},
+            literals::meter_t{y().value - other.y().value},
+            literals::meter_t{z().value - other.z().value}
         };
     }
 
     // Scalar multiplication
-    [[nodiscard]] position operator*(double const scalar) const {
-        return position{
-            literals::meter{x().value * scalar},
-            literals::meter{y().value * scalar},
-            literals::meter{z().value * scalar}
+    [[nodiscard]] position_t operator*(double const scalar) const {
+        return position_t{
+            literals::meter_t{x().value * scalar},
+            literals::meter_t{y().value * scalar},
+            literals::meter_t{z().value * scalar}
         };
     }
 };
@@ -149,11 +149,11 @@ public:
  * @param p2 Second position
  * @return Distance in meters (strong type)
  */
-[[nodiscard]] literals::meter distance(position const& p1, position const& p2) {
+[[nodiscard]] literals::meter_t distance(position_t const& p1, position_t const& p2) {
     double const dx = p1.x().value - p2.x().value;
     double const dy = p1.y().value - p2.y().value;
     double const dz = p1.z().value - p2.z().value;
-    return literals::meter{std::hypot(dx, dy, dz)};
+    return literals::meter_t{std::hypot(dx, dy, dz)};
 }
 
 /**
@@ -164,8 +164,8 @@ public:
  * @param tolerance Maximum allowed difference per coordinate (default: 0.001m)
  * @return true if positions are within tolerance
  */
-[[nodiscard]] bool near(position const& p1, position const& p2,
-                        literals::meter const tolerance = literals::meter{0.001}) {
+[[nodiscard]] bool near(position_t const& p1, position_t const& p2,
+                        literals::meter_t const tolerance = literals::meter_t{0.001}) {
     return std::abs(p1.x().value - p2.x().value) <= tolerance.value and
            std::abs(p1.y().value - p2.y().value) <= tolerance.value and
            std::abs(p1.z().value - p2.z().value) <= tolerance.value;
@@ -174,12 +174,12 @@ public:
 // ===== Quaternion Class =====
 
 /**
- * @brief Represents a rotation as a quaternion.
+ * @brief Represents a rotation as a quaternion_t.
  *
- * Can be constructed from quaternion components (x, y, z, w) or Euler angles
+ * Can be constructed from quaternion_t components (x, y, z, w) or Euler angles
  * (roll, pitch, yaw). Demonstrates rule of 5 and multiple constructors.
  */
-class quaternion {
+class quaternion_t {
 private:
     std::array<double, 4> components_;  // x, y, z, w
 
@@ -199,18 +199,18 @@ private:
 
 public:
     // Default constructor: identity rotation
-    quaternion() : components_{0.0, 0.0, 0.0, 1.0} {}
+    quaternion_t() : components_{0.0, 0.0, 0.0, 1.0} {}
 
-    // Construct from quaternion components (x, y, z, w)
-    quaternion(double const x, double const y, double const z, double const w)
+    // Construct from quaternion_t components (x, y, z, w)
+    quaternion_t(double const x, double const y, double const z, double const w)
         : components_{x, y, z, w} {
         normalize();
     }
 
-    // Named constructor: from Euler angles (accepts ONLY radian type!)
-    [[nodiscard]] static quaternion from_euler(literals::radian const roll,
-                                               literals::radian const pitch,
-                                               literals::radian const yaw) {
+    // Named constructor: from Euler angles (accepts ONLY radian_t type!)
+    [[nodiscard]] static quaternion_t from_euler(literals::radian_t const roll,
+                                               literals::radian_t const pitch,
+                                               literals::radian_t const yaw) {
         // Conversion from Euler angles to quaternion
         double const cy = std::cos(yaw.value * 0.5);
         double const sy = std::sin(yaw.value * 0.5);
@@ -219,7 +219,7 @@ public:
         double const cr = std::cos(roll.value * 0.5);
         double const sr = std::sin(roll.value * 0.5);
 
-        return quaternion{
+        return quaternion_t{
             sr * cp * cy - cr * sp * sy,  // x
             cr * sp * cy + sr * cp * sy,  // y
             cr * cp * sy - sr * sp * cy,  // z
@@ -228,19 +228,19 @@ public:
     }
 
     // Copy constructor
-    quaternion(quaternion const& other) = default;
+    quaternion_t(quaternion_t const& other) = default;
 
     // Move constructor
-    quaternion(quaternion&& other) noexcept = default;
+    quaternion_t(quaternion_t&& other) noexcept = default;
 
     // Copy assignment
-    quaternion& operator=(quaternion const& other) = default;
+    quaternion_t& operator=(quaternion_t const& other) = default;
 
     // Move assignment
-    quaternion& operator=(quaternion&& other) noexcept = default;
+    quaternion_t& operator=(quaternion_t&& other) noexcept = default;
 
     // Destructor
-    ~quaternion() = default;
+    ~quaternion_t() = default;
 
     // Accessors
     [[nodiscard]] double const& x() const { return components_[0]; }
@@ -255,12 +255,12 @@ public:
     [[nodiscard]] double& w() { return components_[3]; }
 
     // Equality comparison
-    [[nodiscard]] bool operator==(quaternion const& other) const {
+    [[nodiscard]] bool operator==(quaternion_t const& other) const {
         return components_ == other.components_;
     }
 
     // Approximate equality
-    [[nodiscard]] bool approx_equal(quaternion const& other, double const tolerance = 0.001) const {
+    [[nodiscard]] bool approx_equal(quaternion_t const& other, double const tolerance = 0.001) const {
         return std::abs(x() - other.x()) <= tolerance and
                std::abs(y() - other.y()) <= tolerance and
                std::abs(z() - other.z()) <= tolerance and
@@ -268,8 +268,8 @@ public:
     }
 
     // Quaternion multiplication (composition of rotations)
-    [[nodiscard]] quaternion operator*(quaternion const& other) const {
-        return quaternion{
+    [[nodiscard]] quaternion_t operator*(quaternion_t const& other) const {
+        return quaternion_t{
             w() * other.x() + x() * other.w() + y() * other.z() - z() * other.y(),
             w() * other.y() - x() * other.z() + y() * other.w() + z() * other.x(),
             w() * other.z() + x() * other.y() - y() * other.x() + z() * other.w(),
@@ -278,33 +278,33 @@ public:
     }
 
     // Conjugate (inverse rotation for unit quaternions)
-    [[nodiscard]] quaternion conjugate() const {
-        return quaternion{-x(), -y(), -z(), w()};
+    [[nodiscard]] quaternion_t conjugate() const {
+        return quaternion_t{-x(), -y(), -z(), w()};
     }
 };
 
 // ===== Transformation Class =====
 
 /**
- * @brief Represents a 3D transformation (position + rotation).
+ * @brief Represents a 3D transformation_t (position_t + rotation).
  *
- * Stores a full 4x4 homogeneous transformation matrix as std::array<double, 16>.
- * Can only be constructed with both position and quaternion (no default constructor).
+ * Stores a full 4x4 homogeneous transformation_t matrix as std::array<double, 16>.
+ * Can only be constructed with both position_t and quaternion_t (no default constructor).
  * Matrix is stored in row-major order.
  */
-class transformation {
+class transformation_t {
 private:
     std::array<double, 16> matrix_;  // 4x4 matrix in row-major order
 
-    // Helper: Convert quaternion to 3x3 rotation matrix and build 4x4 transform
-    static std::array<double, 16> build_matrix(position const& pos, quaternion const& rot) {
-        // Extract quaternion components
+    // Helper: Convert quaternion_t to 3x3 rotation matrix and build 4x4 transform
+    static std::array<double, 16> build_matrix(position_t const& pos, quaternion_t const& rot) {
+        // Extract quaternion_t components
         double const x = rot.x();
         double const y = rot.y();
         double const z = rot.z();
         double const w = rot.w();
 
-        // Convert quaternion to rotation matrix (standard formula)
+        // Convert quaternion_t to rotation matrix (standard formula)
         double const xx = x * x, yy = y * y, zz = z * z;
         double const xy = x * y, xz = x * z, yz = y * z;
         double const wx = w * x, wy = w * y, wz = w * z;
@@ -321,47 +321,47 @@ private:
     }
 
 public:
-    // Construct from position and quaternion
-    transformation(position const& pos, quaternion const& rot)
+    // Construct from position_t and quaternion
+    transformation_t(position_t const& pos, quaternion_t const& rot)
         : matrix_{build_matrix(pos, rot)} {}
 
     // Copy constructor
-    transformation(transformation const& other) = default;
+    transformation_t(transformation_t const& other) = default;
 
     // Move constructor
-    transformation(transformation&& other) noexcept = default;
+    transformation_t(transformation_t&& other) noexcept = default;
 
     // Copy assignment
-    transformation& operator=(transformation const& other) = default;
+    transformation_t& operator=(transformation_t const& other) = default;
 
     // Move assignment
-    transformation& operator=(transformation&& other) noexcept = default;
+    transformation_t& operator=(transformation_t&& other) noexcept = default;
 
     // Destructor
-    ~transformation() = default;
+    ~transformation_t() = default;
 
-    // Extract position (from last column of matrix)
-    [[nodiscard]] position get_position() const {
-        return position{
-            literals::meter{matrix_[3]},   // m03
-            literals::meter{matrix_[7]},   // m13
-            literals::meter{matrix_[11]}   // m23
+    // Extract position_t (from last column of matrix)
+    [[nodiscard]] position_t get_position() const {
+        return position_t{
+            literals::meter_t{matrix_[3]},   // m03
+            literals::meter_t{matrix_[7]},   // m13
+            literals::meter_t{matrix_[11]}   // m23
         };
     }
 
-    // Extract quaternion (from rotation part of matrix)
-    [[nodiscard]] quaternion get_rotation() const {
+    // Extract quaternion_t (from rotation part of matrix)
+    [[nodiscard]] quaternion_t get_rotation() const {
         // Extract 3x3 rotation matrix elements
         double const m00 = matrix_[0], m01 = matrix_[1], m02 = matrix_[2];
         double const m10 = matrix_[4], m11 = matrix_[5], m12 = matrix_[6];
         double const m20 = matrix_[8], m21 = matrix_[9], m22 = matrix_[10];
 
-        // Convert rotation matrix to quaternion (standard algorithm)
+        // Convert rotation matrix to quaternion_t (standard algorithm)
         double const trace = m00 + m11 + m22;
 
         if (trace > 0) {
             double const s = 0.5 / std::sqrt(trace + 1.0);
-            return quaternion{
+            return quaternion_t{
                 (m21 - m12) * s,
                 (m02 - m20) * s,
                 (m10 - m01) * s,
@@ -369,7 +369,7 @@ public:
             };
         } else if (m00 > m11 && m00 > m22) {
             double const s = 2.0 * std::sqrt(1.0 + m00 - m11 - m22);
-            return quaternion{
+            return quaternion_t{
                 0.25 * s,
                 (m01 + m10) / s,
                 (m02 + m20) / s,
@@ -377,7 +377,7 @@ public:
             };
         } else if (m11 > m22) {
             double const s = 2.0 * std::sqrt(1.0 + m11 - m00 - m22);
-            return quaternion{
+            return quaternion_t{
                 (m01 + m10) / s,
                 0.25 * s,
                 (m12 + m21) / s,
@@ -385,7 +385,7 @@ public:
             };
         } else {
             double const s = 2.0 * std::sqrt(1.0 + m22 - m00 - m11);
-            return quaternion{
+            return quaternion_t{
                 (m02 + m20) / s,
                 (m12 + m21) / s,
                 0.25 * s,
@@ -395,20 +395,20 @@ public:
     }
 
     // Equality comparison
-    [[nodiscard]] bool operator==(transformation const& other) const {
+    [[nodiscard]] bool operator==(transformation_t const& other) const {
         return matrix_ == other.matrix_;
     }
 
-    // Approximate equality (uses strong type for position tolerance)
-    [[nodiscard]] bool approx_equal(transformation const& other,
-                                    literals::meter const pos_tolerance = literals::meter{0.001},
+    // Approximate equality (uses strong type for position_t tolerance)
+    [[nodiscard]] bool approx_equal(transformation_t const& other,
+                                    literals::meter_t const pos_tolerance = literals::meter_t{0.001},
                                     double const rot_tolerance = 0.001) const {
         return near(get_position(), other.get_position(), pos_tolerance) and
                get_rotation().approx_equal(other.get_rotation(), rot_tolerance);
     }
 
     // Transform composition (4x4 matrix multiplication)
-    [[nodiscard]] transformation operator*(transformation const& other) const {
+    [[nodiscard]] transformation_t operator*(transformation_t const& other) const {
         std::array<double, 16> result{};
 
         // Multiply: result = this->matrix_ * other.matrix_
@@ -423,31 +423,31 @@ public:
             }
         }
 
-        // Create transformation from resulting matrix
-        // Extract position and rotation from result matrix
-        transformation temp{position{}, quaternion{}};
+        // Create transformation_t from resulting matrix
+        // Extract position_t and rotation from result matrix
+        transformation_t temp{position_t{}, quaternion_t{}};
         temp.matrix_ = result;
         return temp;
     }
 
-    // Transform a position (apply 4x4 matrix to homogeneous coordinate)
-    [[nodiscard]] position transform_point(position const& point) const {
+    // Transform a position_t (apply 4x4 matrix to homogeneous coordinate)
+    [[nodiscard]] position_t transform_point(position_t const& point) const {
         // Treat point as [x, y, z, 1] in homogeneous coordinates
         double const x = point.x().value;
         double const y = point.y().value;
         double const z = point.z().value;
 
         // Matrix-vector multiplication: result = matrix_ * [x, y, z, 1]
-        return position{
-            literals::meter{matrix_[0]*x + matrix_[1]*y + matrix_[2]*z + matrix_[3]},
-            literals::meter{matrix_[4]*x + matrix_[5]*y + matrix_[6]*z + matrix_[7]},
-            literals::meter{matrix_[8]*x + matrix_[9]*y + matrix_[10]*z + matrix_[11]}
+        return position_t{
+            literals::meter_t{matrix_[0]*x + matrix_[1]*y + matrix_[2]*z + matrix_[3]},
+            literals::meter_t{matrix_[4]*x + matrix_[5]*y + matrix_[6]*z + matrix_[7]},
+            literals::meter_t{matrix_[8]*x + matrix_[9]*y + matrix_[10]*z + matrix_[11]}
         };
     }
 
-    // Inverse transformation (invert 4x4 matrix)
-    [[nodiscard]] transformation inverse() const {
-        // For SE(3) transformation, inverse is:
+    // Inverse transformation_t (invert 4x4 matrix)
+    [[nodiscard]] transformation_t inverse() const {
+        // For SE(3) transformation_t, inverse is:
         // [R^T | -R^T*t]
         // [0   | 1     ]
 
@@ -474,7 +474,7 @@ public:
             0.0, 0.0, 0.0, 1.0       // Row 3
         };
 
-        transformation result{position{}, quaternion{}};
+        transformation_t result{position_t{}, quaternion_t{}};
         result.matrix_ = inv_matrix;
         return result;
     }
@@ -485,29 +485,29 @@ public:
 using namespace literals;
 
 TEST(PositionTest, DefaultConstructor) {
-    position const p;
+    position_t const p;
     EXPECT_DOUBLE_EQ(p.x().value, 0.0);
     EXPECT_DOUBLE_EQ(p.y().value, 0.0);
     EXPECT_DOUBLE_EQ(p.z().value, 0.0);
 }
 
 TEST(PositionTest, ParameterizedConstructorWithStrongTypes) {
-    position const p{1.0_m, 2.0_m, 3.0_m};
+    position_t const p{1.0_m, 2.0_m, 3.0_m};
     EXPECT_DOUBLE_EQ(p.x().value, 1.0);
     EXPECT_DOUBLE_EQ(p.y().value, 2.0);
     EXPECT_DOUBLE_EQ(p.z().value, 3.0);
 }
 
 TEST(PositionTest, ConstAccessors) {
-    position const p{1.0_m, 2.0_m, 3.0_m};
-    // These should compile (const accessors return meter const&)
-    [[maybe_unused]] literals::meter const& x = p.x();
-    [[maybe_unused]] literals::meter const& y = p.y();
-    [[maybe_unused]] literals::meter const& z = p.z();
+    position_t const p{1.0_m, 2.0_m, 3.0_m};
+    // These should compile (const accessors return meter_t const&)
+    [[maybe_unused]] literals::meter_t const& x = p.x();
+    [[maybe_unused]] literals::meter_t const& y = p.y();
+    [[maybe_unused]] literals::meter_t const& z = p.z();
 }
 
 TEST(PositionTest, Mutators) {
-    position p{1.0_m, 2.0_m, 3.0_m};
+    position_t p{1.0_m, 2.0_m, 3.0_m};
     p.x() = 10.0_m;
     p.y() = 20.0_m;
     p.z() = 30.0_m;
@@ -518,34 +518,34 @@ TEST(PositionTest, Mutators) {
 }
 
 TEST(PositionTest, UserDefinedLiterals) {
-    position const p{1.0_m, 2.0_m, 3.0_m};
+    position_t const p{1.0_m, 2.0_m, 3.0_m};
     EXPECT_DOUBLE_EQ(p.x().value, 1.0);
     EXPECT_DOUBLE_EQ(p.y().value, 2.0);
     EXPECT_DOUBLE_EQ(p.z().value, 3.0);
 }
 
 TEST(PositionTest, Equality) {
-    position const p1{1.0_m, 2.0_m, 3.0_m};
-    position const p2{1.0_m, 2.0_m, 3.0_m};
-    position const p3{1.1_m, 2.0_m, 3.0_m};
+    position_t const p1{1.0_m, 2.0_m, 3.0_m};
+    position_t const p2{1.0_m, 2.0_m, 3.0_m};
+    position_t const p3{1.1_m, 2.0_m, 3.0_m};
 
     EXPECT_TRUE(p1 == p2);
     EXPECT_FALSE(p1 == p3);
 }
 
 TEST(PositionTest, ApproximateEquality) {
-    position const p1{1.0_m, 2.0_m, 3.0_m};
-    position const p2{1.0001_m, 2.0001_m, 3.0001_m};
-    position const p3{1.1_m, 2.0_m, 3.0_m};
+    position_t const p1{1.0_m, 2.0_m, 3.0_m};
+    position_t const p2{1.0001_m, 2.0001_m, 3.0001_m};
+    position_t const p3{1.1_m, 2.0_m, 3.0_m};
 
     EXPECT_TRUE(near(p1, p2, 0.001_m));
     EXPECT_FALSE(near(p1, p3, 0.001_m));
 }
 
 TEST(PositionTest, DistanceReturnsStrongType) {
-    position const origin{0.0_m, 0.0_m, 0.0_m};
-    position const p1{3.0_m, 4.0_m, 0.0_m};
-    position const p2{1.0_m, 2.0_m, 2.0_m};
+    position_t const origin{0.0_m, 0.0_m, 0.0_m};
+    position_t const p1{3.0_m, 4.0_m, 0.0_m};
+    position_t const p2{1.0_m, 2.0_m, 2.0_m};
 
     auto const dist1 = distance(origin, p1);
     auto const dist2 = distance(origin, p2);
@@ -555,8 +555,8 @@ TEST(PositionTest, DistanceReturnsStrongType) {
 }
 
 TEST(PositionTest, VectorAddition) {
-    position const p1{1.0_m, 2.0_m, 3.0_m};
-    position const p2{4.0_m, 5.0_m, 6.0_m};
+    position_t const p1{1.0_m, 2.0_m, 3.0_m};
+    position_t const p2{4.0_m, 5.0_m, 6.0_m};
     auto const result = p1 + p2;
 
     EXPECT_DOUBLE_EQ(result.x().value, 5.0);
@@ -565,8 +565,8 @@ TEST(PositionTest, VectorAddition) {
 }
 
 TEST(PositionTest, VectorSubtraction) {
-    position const p1{5.0_m, 7.0_m, 9.0_m};
-    position const p2{1.0_m, 2.0_m, 3.0_m};
+    position_t const p1{5.0_m, 7.0_m, 9.0_m};
+    position_t const p2{1.0_m, 2.0_m, 3.0_m};
     auto const result = p1 - p2;
 
     EXPECT_DOUBLE_EQ(result.x().value, 4.0);
@@ -575,7 +575,7 @@ TEST(PositionTest, VectorSubtraction) {
 }
 
 TEST(PositionTest, ScalarMultiplication) {
-    position const p{1.0_m, 2.0_m, 3.0_m};
+    position_t const p{1.0_m, 2.0_m, 3.0_m};
     auto const result = p * 2.0;
 
     EXPECT_DOUBLE_EQ(result.x().value, 2.0);
@@ -584,7 +584,7 @@ TEST(PositionTest, ScalarMultiplication) {
 }
 
 TEST(QuaternionTest, DefaultConstructor) {
-    quaternion const q;
+    quaternion_t const q;
     EXPECT_DOUBLE_EQ(q.x(), 0.0);
     EXPECT_DOUBLE_EQ(q.y(), 0.0);
     EXPECT_DOUBLE_EQ(q.z(), 0.0);
@@ -592,7 +592,7 @@ TEST(QuaternionTest, DefaultConstructor) {
 }
 
 TEST(QuaternionTest, ComponentConstructor) {
-    quaternion const q{0.0, 0.0, 0.0, 1.0};
+    quaternion_t const q{0.0, 0.0, 0.0, 1.0};
     EXPECT_DOUBLE_EQ(q.x(), 0.0);
     EXPECT_DOUBLE_EQ(q.y(), 0.0);
     EXPECT_DOUBLE_EQ(q.z(), 0.0);
@@ -600,14 +600,14 @@ TEST(QuaternionTest, ComponentConstructor) {
 }
 
 TEST(QuaternionTest, NormalizationInConstructor) {
-    quaternion const q{1.0, 1.0, 1.0, 1.0};
+    quaternion_t const q{1.0, 1.0, 1.0, 1.0};
     // Should be normalized to unit quaternion
     double const magnitude = std::sqrt(q.x()*q.x() + q.y()*q.y() + q.z()*q.z() + q.w()*q.w());
     EXPECT_NEAR(magnitude, 1.0, 0.001);
 }
 
 TEST(QuaternionTest, FromEulerAnglesUsesRadianType) {
-    auto const q = quaternion::from_euler(0.0_rad, 0.0_rad, 0.0_rad);
+    auto const q = quaternion_t::from_euler(0.0_rad, 0.0_rad, 0.0_rad);
     EXPECT_NEAR(q.x(), 0.0, 0.001);
     EXPECT_NEAR(q.y(), 0.0, 0.001);
     EXPECT_NEAR(q.z(), 0.0, 0.001);
@@ -615,9 +615,9 @@ TEST(QuaternionTest, FromEulerAnglesUsesRadianType) {
 }
 
 TEST(QuaternionTest, FromEulerAnglesWithDegreeConversion) {
-    // 90 degree rotation around Z axis (must convert to radians!)
-    degree const deg = 90.0_deg;
-    auto const q = quaternion::from_euler(0.0_rad, 0.0_rad, to_radians(deg));
+    // 90 degree_t rotation around Z axis (must convert to radians!)
+    degree_t const deg = 90.0_deg;
+    auto const q = quaternion_t::from_euler(0.0_rad, 0.0_rad, to_radians(deg));
     EXPECT_NEAR(q.z(), 0.707, 0.01);  // sin(45°)
     EXPECT_NEAR(q.w(), 0.707, 0.01);  // cos(45°)
 }
@@ -656,8 +656,8 @@ TEST(QuaternionTest, ConversionFunctionsIdempotent) {
 }
 
 TEST(QuaternionTest, CopyConstructor) {
-    quaternion const q1{1.0, 2.0, 3.0, 4.0};
-    quaternion const q2{q1};
+    quaternion_t const q1{1.0, 2.0, 3.0, 4.0};
+    quaternion_t const q2{q1};
 
     EXPECT_DOUBLE_EQ(q1.x(), q2.x());
     EXPECT_DOUBLE_EQ(q1.y(), q2.y());
@@ -666,16 +666,16 @@ TEST(QuaternionTest, CopyConstructor) {
 }
 
 TEST(QuaternionTest, MoveConstructor) {
-    quaternion q1{1.0, 2.0, 3.0, 4.0};
-    quaternion const q2{std::move(q1)};
+    quaternion_t q1{1.0, 2.0, 3.0, 4.0};
+    quaternion_t const q2{std::move(q1)};
 
     // q2 should have the values (normalized)
     EXPECT_GT(q2.w(), 0.0);
 }
 
 TEST(QuaternionTest, CopyAssignment) {
-    quaternion const q1{1.0, 2.0, 3.0, 4.0};
-    quaternion q2;
+    quaternion_t const q1{1.0, 2.0, 3.0, 4.0};
+    quaternion_t q2;
     q2 = q1;
 
     EXPECT_DOUBLE_EQ(q1.x(), q2.x());
@@ -683,17 +683,17 @@ TEST(QuaternionTest, CopyAssignment) {
 }
 
 TEST(QuaternionTest, Equality) {
-    quaternion const q1{0.0, 0.0, 0.0, 1.0};
-    quaternion const q2{0.0, 0.0, 0.0, 1.0};
-    quaternion const q3{1.0, 0.0, 0.0, 1.0};
+    quaternion_t const q1{0.0, 0.0, 0.0, 1.0};
+    quaternion_t const q2{0.0, 0.0, 0.0, 1.0};
+    quaternion_t const q3{1.0, 0.0, 0.0, 1.0};
 
     EXPECT_TRUE(q1 == q2);
     EXPECT_FALSE(q1 == q3);
 }
 
 TEST(QuaternionTest, Multiplication) {
-    quaternion const q1{0.0, 0.0, 0.0, 1.0};  // Identity
-    quaternion const q2{1.0, 0.0, 0.0, 1.0};
+    quaternion_t const q1{0.0, 0.0, 0.0, 1.0};  // Identity
+    quaternion_t const q2{1.0, 0.0, 0.0, 1.0};
     auto const result = q1 * q2;
 
     // Identity * q = q (after normalization)
@@ -701,7 +701,7 @@ TEST(QuaternionTest, Multiplication) {
 }
 
 TEST(QuaternionTest, Conjugate) {
-    quaternion const q{1.0, 2.0, 3.0, 4.0};
+    quaternion_t const q{1.0, 2.0, 3.0, 4.0};
     auto const conj = q.conjugate();
 
     EXPECT_NEAR(conj.x(), -q.x(), 0.001);
@@ -711,43 +711,43 @@ TEST(QuaternionTest, Conjugate) {
 }
 
 TEST(TransformationTest, ConstructorRequiresPositionAndRotation) {
-    position const pos{1.0_m, 2.0_m, 3.0_m};
-    quaternion const rot{0.0, 0.0, 0.0, 1.0};
+    position_t const pos{1.0_m, 2.0_m, 3.0_m};
+    quaternion_t const rot{0.0, 0.0, 0.0, 1.0};
 
-    transformation const tf{pos, rot};
+    transformation_t const tf{pos, rot};
 
     EXPECT_TRUE(tf.get_position() == pos);
     EXPECT_TRUE(tf.get_rotation() == rot);
 }
 
 TEST(TransformationTest, CopyConstructor) {
-    position const pos{1.0_m, 2.0_m, 3.0_m};
-    quaternion const rot{0.0, 0.0, 0.0, 1.0};
-    transformation const tf1{pos, rot};
-    transformation const tf2{tf1};
+    position_t const pos{1.0_m, 2.0_m, 3.0_m};
+    quaternion_t const rot{0.0, 0.0, 0.0, 1.0};
+    transformation_t const tf1{pos, rot};
+    transformation_t const tf2{tf1};
 
     EXPECT_TRUE(tf1 == tf2);
 }
 
 TEST(TransformationTest, Equality) {
-    position const pos{1.0_m, 2.0_m, 3.0_m};
-    quaternion const rot{0.0, 0.0, 0.0, 1.0};
-    transformation const tf1{pos, rot};
-    transformation const tf2{pos, rot};
+    position_t const pos{1.0_m, 2.0_m, 3.0_m};
+    quaternion_t const rot{0.0, 0.0, 0.0, 1.0};
+    transformation_t const tf1{pos, rot};
+    transformation_t const tf2{pos, rot};
 
     EXPECT_TRUE(tf1 == tf2);
 }
 
 TEST(TransformationTest, ApproximateEquality) {
-    transformation const tf1{position{1.0_m, 2.0_m, 3.0_m}, quaternion{0.0, 0.0, 0.0, 1.0}};
-    transformation const tf2{position{1.0001_m, 2.0001_m, 3.0001_m}, quaternion{0.0, 0.0, 0.0, 1.0}};
+    transformation_t const tf1{position_t{1.0_m, 2.0_m, 3.0_m}, quaternion_t{0.0, 0.0, 0.0, 1.0}};
+    transformation_t const tf2{position_t{1.0001_m, 2.0001_m, 3.0001_m}, quaternion_t{0.0, 0.0, 0.0, 1.0}};
 
     EXPECT_TRUE(tf1.approx_equal(tf2, 0.001_m));
 }
 
 TEST(TransformationTest, TransformComposition) {
-    transformation const tf1{position{1.0_m, 0.0_m, 0.0_m}, quaternion{}};
-    transformation const tf2{position{0.0_m, 1.0_m, 0.0_m}, quaternion{}};
+    transformation_t const tf1{position_t{1.0_m, 0.0_m, 0.0_m}, quaternion_t{}};
+    transformation_t const tf2{position_t{0.0_m, 1.0_m, 0.0_m}, quaternion_t{}};
 
     auto const composed = tf1 * tf2;
 
@@ -758,8 +758,8 @@ TEST(TransformationTest, TransformComposition) {
 }
 
 TEST(TransformationTest, TransformPoint) {
-    transformation const tf{position{1.0_m, 2.0_m, 3.0_m}, quaternion{}};
-    position const point{0.0_m, 0.0_m, 0.0_m};
+    transformation_t const tf{position_t{1.0_m, 2.0_m, 3.0_m}, quaternion_t{}};
+    position_t const point{0.0_m, 0.0_m, 0.0_m};
 
     auto const transformed = tf.transform_point(point);
 
@@ -769,7 +769,7 @@ TEST(TransformationTest, TransformPoint) {
 }
 
 TEST(TransformationTest, InverseTransformation) {
-    transformation const tf{position{1.0_m, 2.0_m, 3.0_m}, quaternion{}};
+    transformation_t const tf{position_t{1.0_m, 2.0_m, 3.0_m}, quaternion_t{}};
     auto const tf_inv = tf.inverse();
 
     auto const inv_pos = tf_inv.get_position();
@@ -782,17 +782,17 @@ TEST(IntegrationTest, RobotArmKinematicsWithStrongTypes) {
     using namespace literals;
 
     // Base of robot at origin
-    transformation const base{position{0.0_m, 0.0_m, 0.0_m}, quaternion{}};
+    transformation_t const base{position_t{0.0_m, 0.0_m, 0.0_m}, quaternion_t{}};
 
     // First joint: 1m up
-    transformation const joint1{position{0.0_m, 0.0_m, 1.0_m}, quaternion{}};
+    transformation_t const joint1{position_t{0.0_m, 0.0_m, 1.0_m}, quaternion_t{}};
 
     // Second joint: 0.5m forward, rotated 45 degrees
     // Note: must explicitly convert degrees to radians!
-    degree const angle = 45.0_deg;
-    transformation const joint2{
-        position{0.5_m, 0.0_m, 0.0_m},
-        quaternion::from_euler(0.0_rad, 0.0_rad, to_radians(angle))
+    degree_t const angle = 45.0_deg;
+    transformation_t const joint2{
+        position_t{0.5_m, 0.0_m, 0.0_m},
+        quaternion_t::from_euler(0.0_rad, 0.0_rad, to_radians(angle))
     };
 
     // Compose transformations
@@ -806,13 +806,13 @@ TEST(IntegrationTest, RobotArmKinematicsWithStrongTypes) {
 TEST(UserDefinedLiteralsTest, PositionAndQuaternionLiterals) {
     using namespace literals;
 
-    // Test position literal (creates origin)
+    // Test position_t literal (creates origin)
     auto const origin = 0.0_pos;
     EXPECT_DOUBLE_EQ(origin.x().value, 0.0);
     EXPECT_DOUBLE_EQ(origin.y().value, 0.0);
     EXPECT_DOUBLE_EQ(origin.z().value, 0.0);
 
-    // Test quaternion literal (creates identity)
+    // Test quaternion_t literal (creates identity)
     auto const identity = 0.0_quat;
     EXPECT_DOUBLE_EQ(identity.x(), 0.0);
     EXPECT_DOUBLE_EQ(identity.y(), 0.0);
@@ -820,7 +820,7 @@ TEST(UserDefinedLiteralsTest, PositionAndQuaternionLiterals) {
     EXPECT_DOUBLE_EQ(identity.w(), 1.0);
 
     // Can use in expressions
-    auto const dist_from_origin = distance(origin, position{1.0_m, 0.0_m, 0.0_m});
+    auto const dist_from_origin = distance(origin, position_t{1.0_m, 0.0_m, 0.0_m});
     EXPECT_NEAR(dist_from_origin.value, 1.0, 0.001);
 }
 
@@ -829,21 +829,21 @@ TEST(StrongTypesTest, PreventImplicitConversions) {
     using namespace literals;
 
     // These should compile:
-    [[maybe_unused]] position const p1{1.0_m, 2.0_m, 3.0_m};
+    [[maybe_unused]] position_t const p1{1.0_m, 2.0_m, 3.0_m};
 
-    // Explicit degree to radian conversion required (both methods work)
-    degree const deg_angle = 90.0_deg;
-    radian const rad_angle = to_radians(deg_angle);
-    [[maybe_unused]] auto const q1 = quaternion::from_euler(0.0_rad, 0.0_rad, rad_angle);
+    // Explicit degree_t to radian_t conversion required (both methods work)
+    degree_t const deg_angle = 90.0_deg;
+    radian_t const rad_angle = to_radians(deg_angle);
+    [[maybe_unused]] auto const q1 = quaternion_t::from_euler(0.0_rad, 0.0_rad, rad_angle);
 
     // Can also convert radians to degrees
-    radian const rad = 1.57_rad;
-    [[maybe_unused]] degree const deg = to_degrees(rad);
+    radian_t const rad = 1.57_rad;
+    [[maybe_unused]] degree_t const deg = to_degrees(rad);
 
     // These should NOT compile (uncomment to verify):
-    // position const p2{1.0, 2.0, 3.0};  // ERROR: no conversion from double to meter
-    // auto const q2 = quaternion::from_euler(0.0, 0.0, 1.57);  // ERROR: needs radian type
-    // auto const q3 = quaternion::from_euler(0.0_deg, 0.0_deg, 90.0_deg);  // ERROR: needs radian, not degree
+    // position_t const p2{1.0, 2.0, 3.0};  // ERROR: no conversion from double to meter
+    // auto const q2 = quaternion_t::from_euler(0.0, 0.0, 1.57);  // ERROR: needs radian_t type
+    // auto const q3 = quaternion_t::from_euler(0.0_deg, 0.0_deg, 90.0_deg);  // ERROR: needs radian, not degree
 
     SUCCEED();  // If we get here, the type system is working correctly
 }
