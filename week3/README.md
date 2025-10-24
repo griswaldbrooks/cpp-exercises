@@ -41,7 +41,6 @@ namespace literals {
 
         // Comparison operators (using spaceship operator)
         [[nodiscard]] constexpr auto operator<=>(meter_t const& other) const = default;
-        [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
     };
 
     // Strong type for angles in radians
@@ -65,7 +64,6 @@ namespace literals {
 
         // Comparison operators
         [[nodiscard]] constexpr auto operator<=>(radian_t const& other) const = default;
-        [[nodiscard]] constexpr bool operator==(radian_t const& other) const = default;
     };
 
     // Strong type for angles in degrees
@@ -89,7 +87,6 @@ namespace literals {
 
         // Comparison operators
         [[nodiscard]] constexpr auto operator<=>(degree_t const& other) const = default;
-        [[nodiscard]] constexpr bool operator==(degree_t const& other) const = default;
     };
 
     // Conversion functions (work with both types)
@@ -422,7 +419,6 @@ namespace literals {
             return meter_t{value / scalar};
         }
         [[nodiscard]] constexpr auto operator<=>(meter_t const& other) const = default;
-        [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
     };
 
     struct radian_t {
@@ -442,7 +438,6 @@ namespace literals {
             return radian_t{value / scalar};
         }
         [[nodiscard]] constexpr auto operator<=>(radian_t const& other) const = default;
-        [[nodiscard]] constexpr bool operator==(radian_t const& other) const = default;
     };
 
     struct degree_t {
@@ -462,7 +457,6 @@ namespace literals {
             return degree_t{value / scalar};
         }
         [[nodiscard]] constexpr auto operator<=>(degree_t const& other) const = default;
-        [[nodiscard]] constexpr bool operator==(degree_t const& other) const = default;
     };
 
     // Conversion functions

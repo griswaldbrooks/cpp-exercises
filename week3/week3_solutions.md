@@ -155,7 +155,6 @@ struct meter_t {
 
     // Comparison operators (using spaceship operator)
     [[nodiscard]] constexpr auto operator<=>(meter_t const& other) const = default;
-    [[nodiscard]] constexpr bool operator==(meter_t const& other) const = default;
 };
 ```
 
@@ -358,7 +357,6 @@ namespace literals {
 
         // Comparison operators
         [[nodiscard]] constexpr auto operator<=>(radian_t const& other) const = default;
-        [[nodiscard]] constexpr bool operator==(radian_t const& other) const = default;
     };
 
     // Strong type for angles in degrees
@@ -382,7 +380,6 @@ namespace literals {
 
         // Comparison operators
         [[nodiscard]] constexpr auto operator<=>(degree_t const& other) const = default;
-        [[nodiscard]] constexpr bool operator==(degree_t const& other) const = default;
     };
 
     // Conversion functions (work with both types)
