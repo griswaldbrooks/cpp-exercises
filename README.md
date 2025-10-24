@@ -9,13 +9,13 @@ A structured curriculum for learning the C++ Standard Template Library using C++
 ```
 cpp-exercises/
 ├── week2/           # std::string and std::string_view
-├── week3/           # std::array and std::span (coming soon)
+├── week3/           # std::array and std::span
 ├── week4/           # std::deque and std::list (coming soon)
 └── ...
 ```
 
 Each week is a self-contained project with:
-- Exercise descriptions (`weekN_exercises.md`)
+- Exercise descriptions (`README.md`)
 - Solution implementations (`weekN_solutions.md`)
 - Test suite (GoogleTest)
 - Build configuration (CMake + Pixi)
@@ -35,7 +35,7 @@ Pixi manages all dependencies including:
 Navigate to any week and run:
 
 ```bash
-cd week2
+cd week2  # or week3
 pixi run all
 ```
 

@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        week: [week2]
+        week: [week2, week3]
         # Add new weeks here as you create them: [week2, week3, week4, ...]
 
     steps:
