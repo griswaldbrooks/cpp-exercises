@@ -706,7 +706,7 @@ public:
 [[nodiscard]] bool near(transformation_t const& tf1, transformation_t const& tf2,
                         meter_t const pos_tolerance = meter_t{0.001},
                         double const rot_tolerance = 0.001) {
-    return near(tf1.position_t(), tf2.position_t(), pos_tolerance) and
+    return near(tf1.position(), tf2.position(), pos_tolerance) and
            near(tf1.rotation(), tf2.rotation(), rot_tolerance);
 }
 ```
@@ -813,7 +813,7 @@ transformation_t const joint2{
 auto const end_effector = base * joint1 * joint2;
 
 // Query end effector position
-auto const pos = end_effector.position_t();
+auto const pos = end_effector.position();
 std::cout << std::format("End effector at: ({}, {}, {})\n",
                          pos.x(), pos.y(), pos.z());
 
