@@ -504,6 +504,10 @@ class transformation_t {
 private:
     std::array<double, 16> matrix_;  // 4x4 matrix in row-major order
 
+    // Private constructor: directly initialize from a matrix
+    // Used internally by operator* to avoid creating temporary position/quaternion
+    explicit transformation_t(std::array<double, 16> const& mat) : matrix_{mat} {}
+
     // Helper: Convert quaternion_t to rotation matrix and build 4x4 transform
     static std::array<double, 16> build_matrix(position_t const& pos, quaternion_t const& rot) {
         // Extract quaternion_t components
@@ -549,14 +553,18 @@ public:
 
     // Extract quaternion_t (convert rotation matrix to quaternion_t)
     [[nodiscard]] quaternion_t rotation() const {
-        // Extract 3x3 rotation matrix
+        // Extract 3x3 rotation matrix elements
         double const m00 = matrix_[0], m01 = matrix_[1], m02 = matrix_[2];
         double const m10 = matrix_[4], m11 = matrix_[5], m12 = matrix_[6];
         double const m20 = matrix_[8], m21 = matrix_[9], m22 = matrix_[10];
 
-        // Convert rotation matrix to quaternion_t (standard algorithm)
+        // Convert rotation matrix to quaternion using trace-based method
+        // The trace determines which quaternion component is largest and most numerically stable
         double const trace = m00 + m11 + m22;
 
+        // Case 1: w is the largest component (trace > 0)
+        // This is the most common case for small rotations
+        // We compute w first, then derive x, y, z from off-diagonal elements
         if (trace > 0) {
             double const s = 0.5 / std::sqrt(trace + 1.0);
             return quaternion_t{
@@ -565,7 +573,12 @@ public:
                 (m10 - m01) * s,
                 0.25 / s
             };
-        } else if (m00 > m11 && m00 > m22) {
+        }
+
+        // Case 2: x is the largest component (m00 is the largest diagonal element)
+        // This occurs when rotation is primarily around the X axis
+        // We compute x first, then derive y, z, w
+        if (m00 > m11 && m00 > m22) {
             double const s = 2.0 * std::sqrt(1.0 + m00 - m11 - m22);
             return quaternion_t{
                 0.25 * s,
@@ -573,7 +586,12 @@ public:
                 (m02 + m20) / s,
                 (m21 - m12) / s
             };
-        } else if (m11 > m22) {
+        }
+
+        // Case 3: y is the largest component (m11 is the largest diagonal element)
+        // This occurs when rotation is primarily around the Y axis
+        // We compute y first, then derive x, z, w
+        if (m11 > m22) {
             double const s = 2.0 * std::sqrt(1.0 + m11 - m00 - m22);
             return quaternion_t{
                 (m01 + m10) / s,
@@ -581,15 +599,18 @@ public:
                 (m12 + m21) / s,
                 (m02 - m20) / s
             };
-        } else {
-            double const s = 2.0 * std::sqrt(1.0 + m22 - m00 - m11);
-            return quaternion_t{
-                (m02 + m20) / s,
-                (m12 + m21) / s,
-                0.25 * s,
-                (m10 - m01) / s
-            };
         }
+
+        // Case 4: z is the largest component (m22 is the largest diagonal element)
+        // This occurs when rotation is primarily around the Z axis
+        // We compute z first, then derive x, y, w
+        double const s = 2.0 * std::sqrt(1.0 + m22 - m00 - m11);
+        return quaternion_t{
+            (m02 + m20) / s,
+            (m12 + m21) / s,
+            0.25 * s,
+            (m10 - m01) / s
+        };
     }
 
     // Transformation composition (4x4 matrix multiplication)
@@ -597,6 +618,8 @@ public:
         std::array<double, 16> result{};
 
         // Multiply: result = this->matrix_ * other.matrix_
+        // Row-major order: result[row*4 + col]
+        // Composition applies 'other' transformation first, then 'this' transformation
         for (int row = 0; row < 4; ++row) {
             for (int col = 0; col < 4; ++col) {
                 double sum = 0.0;
@@ -607,10 +630,8 @@ public:
             }
         }
 
-        // Create transformation_t from resulting matrix
-        transformation_t temp{position_t{}, quaternion_t{}};
-        temp.matrix_ = result;
-        return temp;
+        // Use private constructor to avoid temporary position/quaternion creation
+        return transformation_t{result};
     }
 
     // Apply additional rotation to this transformation
@@ -622,14 +643,17 @@ public:
         return *this * rot_tf;
     }
 
-    // Transform a position_t (apply 4x4 matrix to homogeneous coordinate)
+    // Transform a position_t (apply rotation and translation)
     [[nodiscard]] position_t operator*(position_t const& point) const {
         // Treat point as [x, y, z, 1] in homogeneous coordinates
+        // This allows us to apply both rotation and translation in a single matrix multiplication
         double const x = point.x().value;
         double const y = point.y().value;
         double const z = point.z().value;
 
-        // Matrix-vector multiplication
+        // Matrix-vector multiplication: result = matrix_ * [x, y, z, 1]
+        // The '1' in the homogeneous coordinate enables translation
+        // Result: rotated_point + translation
         return position_t{
             meter_t{matrix_[0]*x + matrix_[1]*y + matrix_[2]*z + matrix_[3]},
             meter_t{matrix_[4]*x + matrix_[5]*y + matrix_[6]*z + matrix_[7]},
@@ -637,29 +661,40 @@ public:
         };
     }
 
-    // Inverse transformation_t (for SE(3): [R^T | -R^T*t])
+    // Inverse transformation_t (invert 4x4 matrix)
     [[nodiscard]] transformation_t inverse() const {
-        // Extract rotation and translation
+        // For SE(3) transformations, the inverse is:
+        // [R^T | -R^T*t]
+        // [0   | 1     ]
+        // where R is the rotation matrix and t is the translation vector
+        // This works because R is orthogonal (R^T * R = I for rotation matrices)
+
+        // Extract rotation matrix (upper-left 3x3)
         double const r00 = matrix_[0], r01 = matrix_[1], r02 = matrix_[2];
         double const r10 = matrix_[4], r11 = matrix_[5], r12 = matrix_[6];
         double const r20 = matrix_[8], r21 = matrix_[9], r22 = matrix_[10];
-        double const tx = matrix_[3], ty = matrix_[7], tz = matrix_[11];
+
+        // Extract translation vector (last column of upper 3x4 part)
+        double const tx = matrix_[3];
+        double const ty = matrix_[7];
+        double const tz = matrix_[11];
 
         // Compute -R^T * t
+        // This gives the new translation after rotating the inverse direction
         double const new_tx = -(r00*tx + r10*ty + r20*tz);
         double const new_ty = -(r01*tx + r11*ty + r21*tz);
         double const new_tz = -(r02*tx + r12*ty + r22*tz);
 
-        std::array<double, 16> inv_matrix = {
-            r00, r10, r20, new_tx,   // Row 0
-            r01, r11, r21, new_ty,   // Row 1
-            r02, r12, r22, new_tz,   // Row 2
+        // Build inverse matrix with transposed rotation and new translation
+        std::array<double, 16> const inv_matrix = {
+            r00, r10, r20, new_tx,   // Row 0: R^T[0] | -R^T*t[0]
+            r01, r11, r21, new_ty,   // Row 1: R^T[1] | -R^T*t[1]
+            r02, r12, r22, new_tz,   // Row 2: R^T[2] | -R^T*t[2]
             0.0, 0.0, 0.0, 1.0       // Row 3
         };
 
-        transformation_t result{position_t{}, quaternion_t{}};
-        result.matrix_ = inv_matrix;
-        return result;
+        // Use private constructor to avoid temporary position/quaternion creation
+        return transformation_t{inv_matrix};
     }
 
     [[nodiscard]] bool operator==(transformation_t const& other) const {
@@ -683,6 +718,32 @@ public:
 3. **Industry standard**: SE(3) transformations are universally represented this way
 4. **Encapsulation**: Users work with position_t/quaternion_t (intuitive) while internally using matrices (efficient)
 
+**Why Use a Private Constructor?**
+
+The private constructor `transformation_t(std::array<double, 16> const& mat)` is an optimization technique:
+
+```cpp
+// Without private constructor - inefficient:
+transformation_t operator*(transformation_t const& other) const {
+    std::array<double, 16> result = /* matrix multiplication */;
+    transformation_t temp{position_t{}, quaternion_t{}};  // Creates temp position/quaternion
+    temp.matrix_ = result;  // Then overwrites the matrix
+    return temp;
+}
+
+// With private constructor - efficient:
+transformation_t operator*(transformation_t const& other) const {
+    std::array<double, 16> result = /* matrix multiplication */;
+    return transformation_t{result};  // Directly construct from matrix
+}
+```
+
+Benefits:
+- **No temporary objects**: Avoids creating unnecessary `position_t` and `quaternion_t` objects
+- **Better performance**: Fewer allocations and constructions
+- **Cleaner code**: Direct construction from computed matrix
+- **Encapsulation maintained**: Still private, so users can't misuse it
+
 **Why No Default Constructor?**
 
 ```cpp
@@ -694,6 +755,36 @@ using namespace literals;
 
 transformation_t const tf{position_t{1.0_m, 2.0_m, 3.0_m}, quaternion_t{}};  // OK: explicit
 ```
+
+**Why Use Independent `if` Statements in `rotation()` Instead of `else if`?**
+
+The `rotation()` method converts a rotation matrix back to a quaternion using a trace-based algorithm. Notice it uses independent `if` statements rather than `else if`:
+
+```cpp
+if (trace > 0) { /* Case 1 */ return ...; }
+if (m00 > m11 && m00 > m22) { /* Case 2 */ return ...; }
+if (m11 > m22) { /* Case 3 */ return ...; }
+/* Case 4 */ return ...;
+```
+
+**Why not use `else if`?**
+
+Using independent `if` statements makes the code more explicit and self-documenting:
+
+1. **Clarity**: Each case clearly shows its condition, making it obvious what triggers each branch
+2. **Early returns**: Each case returns immediately, so `else` is unnecessary
+3. **Easier debugging**: You can add breakpoints on each condition independently
+4. **Pattern visibility**: The cascading structure shows we're checking for the "largest" component
+
+**How the algorithm works:**
+
+The algorithm chooses which quaternion component to compute first based on numerical stability:
+- **Case 1** (`trace > 0`): w is largest → compute w, derive x, y, z (most common for small rotations)
+- **Case 2** (`m00 largest`): x is largest → compute x, derive others (rotation around X axis)
+- **Case 3** (`m11 largest`): y is largest → compute y, derive others (rotation around Y axis)
+- **Case 4** (otherwise): z is largest → compute z, derive others (rotation around Z axis)
+
+Each case avoids division by small numbers, ensuring numerical stability.
 
 ### Complete Usage Example
 
@@ -745,45 +836,62 @@ auto const rotation = quaternion_t::from_euler(angle_rad, 0.0_rad, 0.0_rad);
 - No allocations (just pointer + size)
 
 ```cpp
-double average(std::span<double const> const readings) {
+// Calculate the average of sensor readings - templated for any numeric type
+template<typename T>
+T average(std::span<T const> const readings) {
     if (readings.empty()) {
-        return 0.0;
+        return T{};
     }
-    double const sum = std::accumulate(readings.begin(), readings.end(), 0.0);
+    // Start with first element to avoid issues with T{} not being "zero" for all types
+    // (e.g., quaternion_t{} is identity rotation {0,0,0,1}, not zero)
+    T sum = readings[0];
+    for (size_t i = 1; i < readings.size(); ++i) {
+        sum = sum + readings[i];
+    }
     return sum / static_cast<double>(readings.size());
 }
 
-double min_value(std::span<double const> const readings) {
+// Find the minimum value in sensor readings - templated for any numeric type
+template<typename T>
+T min_value(std::span<T const> const readings) {
     if (readings.empty()) {
-        return std::numeric_limits<double>::max();
+        return std::numeric_limits<T>::max();
     }
     return *std::min_element(readings.begin(), readings.end());
 }
 
-double max_value(std::span<double const> const readings) {
+// Find the maximum value in sensor readings - templated for any numeric type
+template<typename T>
+T max_value(std::span<T const> const readings) {
     if (readings.empty()) {
-        return std::numeric_limits<double>::lowest();
+        return std::numeric_limits<T>::lowest();
     }
     return *std::max_element(readings.begin(), readings.end());
 }
 
-size_t count_above_threshold(std::span<double const> const readings,
-                             double const threshold) {
+// Count how many readings exceed a threshold - templated for any numeric type
+template<typename T>
+size_t count_above_threshold(std::span<T const> const readings, T const threshold) {
     return std::count_if(readings.begin(), readings.end(),
-                        [threshold](double const value) { return value > threshold; });
+                         [threshold](T const value) { return value > threshold; });
 }
 
-void normalize(std::span<double> const readings) {
+// Normalize readings to [0, 1] range (modifies in-place) - templated for any numeric type
+template<typename T>
+void normalize(std::span<T> const readings) {
     if (readings.empty()) {
         return;
     }
 
-    double const min = min_value(readings);
-    double const max = max_value(readings);
-    double const range = max - min;
+    // Create const span for min/max computation
+    std::span<T const> const const_readings{readings};
+    T const min = min_value<T>(const_readings);
+    T const max = max_value<T>(const_readings);
+    T const range = max - min;
 
-    if (range == 0.0) {
-        std::fill(readings.begin(), readings.end(), 0.5);
+    if (range == T{}) {
+        // All values are the same, set to 0.5
+        std::fill(readings.begin(), readings.end(), static_cast<T>(0.5));
         return;
     }
 
@@ -793,6 +901,8 @@ void normalize(std::span<double> const readings) {
 }
 
 // Sliding window average - templated for any numeric type
+// Uses O(n) algorithm: compute first window sum, then slide by
+// subtracting left element and adding right element
 template<typename T>
 std::vector<T> sliding_window_average(std::span<T const> const values, size_t const window_size) {
     if (values.size() < window_size || window_size == 0) {
@@ -803,28 +913,47 @@ std::vector<T> sliding_window_average(std::span<T const> const values, size_t co
     result.reserve(values.size() - window_size + 1);
 
     // Compute sum of first window
-    T window_sum = T{};
-    for (size_t i = 0; i < window_size; ++i) {
-        window_sum += values[i];
+    // Start with first value to avoid issues with T{} not being "zero" for all types
+    T window_sum = values[0];
+    for (size_t i = 1; i < window_size; ++i) {
+        window_sum = window_sum + values[i];
     }
-    result.push_back(window_sum / static_cast<T>(window_size));
+    result.push_back(window_sum / static_cast<double>(window_size));
 
     // Slide the window: remove leftmost, add new rightmost
     for (size_t i = window_size; i < values.size(); ++i) {
         window_sum = window_sum - values[i - window_size] + values[i];
-        result.push_back(window_sum / static_cast<T>(window_size));
+        result.push_back(window_sum / static_cast<double>(window_size));
     }
 
     return result;
 }
 ```
 
-**Why Template the Sliding Window?**
+**Why Template All Functions?**
 
-By templating `sliding_window_average`, it works with any numeric type:
-- `int`, `float`, `double` for sensor readings
-- Custom numeric types (if they support `+`, `-`, `/`)
-- Maintains type safety (no implicit conversions)
+By templating **all** sensor statistics functions, they work with any numeric type:
+- Built-in types: `int`, `float`, `double`
+- Custom numeric types like `quaternion_t` (if they support required operators)
+- Single implementation for all types
+- Type-safe (no implicit conversions)
+- Zero runtime overhead (template instantiation at compile time)
+
+**Key Implementation Details:**
+
+1. **Both `average` and `sliding_window_average` start from first element** instead of `T{}`
+   - Not all types have a meaningful "zero" value
+   - `quaternion_t{}` is identity rotation `{0, 0, 0, 1}`, not zero
+   - Starting with `values[0]` or `readings[0]` avoids adding wrong identity element
+   - This is a common pattern when working with non-numeric types
+
+2. **`normalize` creates const span internally**
+   - Avoids cv-qualifier conflicts when calling `min_value` and `max_value`
+   - `std::span<T>` → `std::span<T const>` conversion
+
+3. **Division by `static_cast<double>`** instead of `static_cast<T>`
+   - Works for types with `operator/(double)` like `quaternion_t`
+   - More flexible than requiring `operator/(T)`
 
 **Sliding Window Algorithm Explanation:**
 
@@ -833,47 +962,71 @@ Instead of recalculating the sum for each window (O(n*w) complexity), we use a s
 2. For each subsequent window, subtract the element leaving and add the element entering
 3. This reduces complexity to O(n)
 
-**Usage with different containers:**
+**Usage with different types and containers:**
 ```cpp
-std::array<double, 5> arr = {1, 2, 3, 4, 5};
-std::vector<double> vec = {1, 2, 3, 4, 5};
-double c_arr[] = {1, 2, 3, 4, 5};
+// Works with doubles
+std::array<double, 5> arr = {1.0, 2.0, 3.0, 4.0, 5.0};
+auto avg1 = average<double>(arr);
 
-// All work with the same function!
-auto avg1 = average(arr);
-auto avg2 = average(vec);
-auto avg3 = average(std::span{c_arr});
+// Works with integers
+std::vector<int> vec = {10, 20, 30, 40};
+auto avg2 = average<int>(vec);
 
-// Sliding window examples
+// Works with C-arrays
+float c_arr[] = {1.5f, 2.5f, 3.5f};
+auto avg3 = average<float>(std::span{c_arr});
+
+// Sliding window with doubles
 std::array<double, 7> noisy = {1.0, 5.0, 2.0, 6.0, 3.0, 7.0, 4.0};
 auto smoothed = sliding_window_average(std::span<double const>{noisy}, 3);
 // smoothed = {2.67, 4.33, 3.67, 5.33, 4.67}
 
-// Works with integers too!
+// Sliding window with integers
 std::vector<int> int_data = {10, 20, 30, 40, 50};
 auto int_averaged = sliding_window_average(std::span<int const>{int_data}, 2);
 // int_averaged = {15, 25, 35, 45}
 
+// Average with quaternions (for IMU sensor fusion!)
+std::array<quaternion_t, 3> const imu_readings = {
+    quaternion_t{0.1, 0.2, 0.3, 0.9},
+    quaternion_t{0.2, 0.3, 0.4, 0.8},
+    quaternion_t{0.3, 0.4, 0.5, 0.7}
+};
+auto avg_orientation = average<quaternion_t>(imu_readings);
+// Component-wise averaging: avg_orientation = {0.2, 0.3, 0.4, 0.8}
+
+// Sliding window with quaternions (for IMU sensor smoothing!)
+std::array<quaternion_t, 5> quats = {
+    quaternion_t{0.1, 0.2, 0.3, 0.9},
+    quaternion_t{0.2, 0.3, 0.4, 0.8},
+    quaternion_t{0.3, 0.4, 0.5, 0.7},
+    quaternion_t{0.4, 0.5, 0.6, 0.6},
+    quaternion_t{0.5, 0.6, 0.7, 0.5}
+};
+auto smoothed_quats = sliding_window_average(std::span<quaternion_t const>{quats}, 3);
+// Component-wise averaging for sensor noise reduction
+
 // Subspans (slicing)
-auto first_half = std::span{arr}.subspan(0, 3);  // {1, 2, 3}
-auto avg_half = average(first_half);
+auto first_half = std::span{arr}.subspan(0, 3);  // {1.0, 2.0, 3.0}
+auto avg_half = average<double>(first_half);
 ```
 
 **Modern C++20 ranges alternative:**
 ```cpp
 #include <ranges>
 
-double average(std::span<double const> const readings) {
-    if (readings.empty()) return 0.0;
+template<typename T>
+T average(std::span<T const> const readings) {
+    if (readings.empty()) return T{};
 
-    auto const sum = std::ranges::fold_left(readings, 0.0, std::plus{});
-    return sum / static_cast<double>(readings.size());
+    auto const sum = std::ranges::fold_left(readings, T{}, std::plus{});
+    return sum / static_cast<T>(readings.size());
 }
 
-size_t count_above_threshold(std::span<double const> const readings,
-                             double const threshold) {
+template<typename T>
+size_t count_above_threshold(std::span<T const> const readings, T const threshold) {
     return std::ranges::count_if(readings,
-        [threshold](double v) { return v > threshold; });
+        [threshold](T v) { return v > threshold; });
 }
 ```
 

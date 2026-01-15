@@ -734,30 +734,41 @@ int main() {
 
 Your robot has multiple sensors (LIDAR, cameras, IMU, etc.). You need generic functions that can compute statistics over any contiguous sequence of sensor readings.
 
-Write functions using `std::span` to work with sensor data:
+Write **templated** functions using `std::span` to work with sensor data:
 
 ```cpp
-// Calculate the average of sensor readings
-double average(std::span<double const> readings);
+// Calculate the average of sensor readings - templated for any numeric type
+template<typename T>
+T average(std::span<T const> readings);
 
-// Find the minimum value in sensor readings
-double min_value(std::span<double const> readings);
+// Find the minimum value in sensor readings - templated for any numeric type
+template<typename T>
+T min_value(std::span<T const> readings);
 
-// Find the maximum value in sensor readings
-double max_value(std::span<double const> readings);
+// Find the maximum value in sensor readings - templated for any numeric type
+template<typename T>
+T max_value(std::span<T const> readings);
 
-// Count how many readings exceed a threshold
-size_t count_above_threshold(std::span<double const> readings, double threshold);
+// Count how many readings exceed a threshold - templated for any numeric type
+template<typename T>
+size_t count_above_threshold(std::span<T const> readings, T threshold);
 
-// Normalize readings to [0, 1] range (modifies in-place)
-void normalize(std::span<double> readings);
+// Normalize readings to [0, 1] range (modifies in-place) - templated for any numeric type
+template<typename T>
+void normalize(std::span<T> readings);
 
 // Sliding window average - computes average of each window of size 'window_size'
 // Returns a vector with (values.size() - window_size + 1) elements
-// Template this function to work with any numeric type!
+// Templated to work with any type supporting +, -, and / operators!
 template<typename T>
 std::vector<T> sliding_window_average(std::span<T const> values, size_t window_size);
 ```
+
+**Why template all functions?**
+- Works with built-in types (`int`, `float`, `double`)
+- Works with custom types like `quaternion_t` (for IMU sensor fusion)
+- Single implementation for all numeric types
+- Zero runtime overhead - templates resolved at compile time
 
 **Example:**
 ```cpp
@@ -874,31 +885,40 @@ private:
     std::array<double, 4> components_;
 };
 
-// Your solutions here
-double average(std::span<double const> readings);
-double min_value(std::span<double const> readings);
-double max_value(std::span<double const> readings);
-size_t count_above_threshold(std::span<double const> readings, double threshold);
-void normalize(std::span<double> readings);
+// Your templated solutions here
+template<typename T>
+T average(std::span<T const> readings);
+
+template<typename T>
+T min_value(std::span<T const> readings);
+
+template<typename T>
+T max_value(std::span<T const> readings);
+
+template<typename T>
+size_t count_above_threshold(std::span<T const> readings, T threshold);
+
+template<typename T>
+void normalize(std::span<T> readings);
 
 template<typename T>
 std::vector<T> sliding_window_average(std::span<T const> values, size_t window_size);
 
 int main() {
-    // Test basic statistics
+    // Test basic statistics with doubles
     std::array<double, 5> const data1 = {1.0, 2.0, 3.0, 4.0, 5.0};
-    assert(std::abs(average(data1) - 3.0) < 0.001);
-    assert(std::abs(min_value(data1) - 1.0) < 0.001);
-    assert(std::abs(max_value(data1) - 5.0) < 0.001);
-    assert(count_above_threshold(data1, 3.0) == 2);
+    assert(std::abs(average<double>(data1) - 3.0) < 0.001);
+    assert(std::abs(min_value<double>(data1) - 1.0) < 0.001);
+    assert(std::abs(max_value<double>(data1) - 5.0) < 0.001);
+    assert(count_above_threshold<double>(data1, 3.0) == 2);
 
     // Test normalization
     std::vector<double> data2 = {2.0, 4.0, 6.0, 8.0};
-    normalize(data2);
+    normalize<double>(data2);
     assert(std::abs(data2[0] - 0.0) < 0.001);  // min -> 0
     assert(std::abs(data2[3] - 1.0) < 0.001);  // max -> 1
 
-    // Test sliding window average
+    // Test sliding window average with doubles
     std::array<double, 5> const data3 = {1.0, 2.0, 3.0, 4.0, 5.0};
     auto const windowed = sliding_window_average(std::span<double const>{data3}, 3);
     assert(windowed.size() == 3);  // 5 - 3 + 1 = 3
@@ -923,12 +943,12 @@ int main() {
 
     // Analyze just the front-left section using span (indices 0-4)
     auto const front_left = std::span{lidar_distances}.subspan(0, 5);
-    double const front_left_avg = average(front_left);
+    double const front_left_avg = average<double>(front_left);
     assert(std::abs(front_left_avg - 2.54) < 0.01);  // Average of front-left readings
 
     // Find minimum obstacle distance in front-right section (indices 5-9)
     auto const front_right = std::span{lidar_distances}.subspan(5, 5);
-    double const closest_obstacle = min_value(front_right);
+    double const closest_obstacle = min_value<double>(front_right);
     assert(std::abs(closest_obstacle - 2.4) < 0.001);
 
     // ROBOTICS EXAMPLE 2: IMU orientation filtering with sliding window

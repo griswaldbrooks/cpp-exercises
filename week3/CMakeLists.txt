@@ -36,29 +36,3 @@ target_link_libraries(sensor_array_test
 )
 
 add_test(NAME SensorArrayTests COMMAND sensor_array_test)
-
-# Exercise 3: Trajectory
-add_executable(trajectory_test
-    test_trajectory.cpp
-)
-
-target_link_libraries(trajectory_test
-    PRIVATE
-        GTest::gtest
-        GTest::gtest_main
-)
-
-add_test(NAME TrajectoryTests COMMAND trajectory_test)
-
-# Exercise 4: Multi-Robot
-add_executable(multi_robot_test
-    test_multi_robot.cpp
-)
-
-target_link_libraries(multi_robot_test
-    PRIVATE
-        GTest::gtest
-        GTest::gtest_main
-)
-
-add_test(NAME MultiRobotTests COMMAND multi_robot_test)

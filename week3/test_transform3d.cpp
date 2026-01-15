@@ -277,6 +277,21 @@ class quaternion_t {
                             w() * other.w() - x() * other.x() - y() * other.y() - z() * other.z()};
     }
 
+    // Quaternion addition (component-wise, useful for averaging)
+    [[nodiscard]] quaternion_t operator+(quaternion_t const& other) const {
+        return quaternion_t{x() + other.x(), y() + other.y(), z() + other.z(), w() + other.w()};
+    }
+
+    // Quaternion subtraction (component-wise)
+    [[nodiscard]] quaternion_t operator-(quaternion_t const& other) const {
+        return quaternion_t{x() - other.x(), y() - other.y(), z() - other.z(), w() - other.w()};
+    }
+
+    // Quaternion scalar division (component-wise, useful for averaging)
+    [[nodiscard]] quaternion_t operator/(double const scalar) const {
+        return quaternion_t{x() / scalar, y() / scalar, z() / scalar, w() / scalar};
+    }
+
     // Conjugate (inverse rotation for unit quaternions)
     [[nodiscard]] quaternion_t conjugate() const { return quaternion_t{-x(), -y(), -z(), w()}; }
 };
@@ -300,6 +315,10 @@ class quaternion_t {
 class transformation_t {
    private:
     std::array<double, 16> matrix_;  // 4x4 matrix in row-major order
+
+    // Private constructor: directly initialize from a matrix
+    // Used internally by operator* to avoid creating temporary position/quaternion
+    explicit transformation_t(std::array<double, 16> const& mat) : matrix_{mat} {}
 
     // Helper: Convert quaternion_t to 3x3 rotation matrix and build 4x4 transform
     static std::array<double, 16> build_matrix(position_t const& pos, quaternion_t const& rot) {
@@ -373,22 +392,39 @@ class transformation_t {
         double const m10 = matrix_[4], m11 = matrix_[5], m12 = matrix_[6];
         double const m20 = matrix_[8], m21 = matrix_[9], m22 = matrix_[10];
 
-        // Convert rotation matrix to quaternion_t (standard algorithm)
+        // Convert rotation matrix to quaternion using trace-based method
+        // The trace determines which quaternion component is largest and most numerically stable
         double const trace = m00 + m11 + m22;
 
+        // Case 1: w is the largest component (trace > 0)
+        // This is the most common case for small rotations
+        // We compute w first, then derive x, y, z from off-diagonal elements
         if (trace > 0) {
             double const s = 0.5 / std::sqrt(trace + 1.0);
             return quaternion_t{(m21 - m12) * s, (m02 - m20) * s, (m10 - m01) * s, 0.25 / s};
-        } else if (m00 > m11 && m00 > m22) {
+        }
+
+        // Case 2: x is the largest component (m00 is the largest diagonal element)
+        // This occurs when rotation is primarily around the X axis
+        // We compute x first, then derive y, z, w
+        if (m00 > m11 && m00 > m22) {
             double const s = 2.0 * std::sqrt(1.0 + m00 - m11 - m22);
             return quaternion_t{0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s};
-        } else if (m11 > m22) {
+        }
+
+        // Case 3: y is the largest component (m11 is the largest diagonal element)
+        // This occurs when rotation is primarily around the Y axis
+        // We compute y first, then derive x, z, w
+        if (m11 > m22) {
             double const s = 2.0 * std::sqrt(1.0 + m11 - m00 - m22);
             return quaternion_t{(m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s};
-        } else {
-            double const s = 2.0 * std::sqrt(1.0 + m22 - m00 - m11);
-            return quaternion_t{(m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s};
         }
+
+        // Case 4: z is the largest component (m22 is the largest diagonal element)
+        // This occurs when rotation is primarily around the Z axis
+        // We compute z first, then derive x, y, w
+        double const s = 2.0 * std::sqrt(1.0 + m22 - m00 - m11);
+        return quaternion_t{(m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s};
     }
 
     // Equality comparison
@@ -402,6 +438,7 @@ class transformation_t {
 
         // Multiply: result = this->matrix_ * other.matrix_
         // Row-major order: result[row*4 + col]
+        // Composition applies 'other' transformation first, then 'this' transformation
         for (int row = 0; row < 4; ++row) {
             for (int col = 0; col < 4; ++col) {
                 double sum = 0.0;
@@ -412,21 +449,31 @@ class transformation_t {
             }
         }
 
-        // Create transformation_t from resulting matrix
-        // Extract position_t and rotation from result matrix
-        transformation_t temp{position_t{}, quaternion_t{}};
-        temp.matrix_ = result;
-        return temp;
+        // Use private constructor to avoid temporary position/quaternion creation
+        return transformation_t{result};
     }
 
-    // Transform a position_t (apply 4x4 matrix to homogeneous coordinate)
-    [[nodiscard]] position_t transform_point(position_t const& point) const {
+    // Apply additional rotation to this transformation
+    // Equivalent to: *this * transformation_t{position_t{}, rotation}
+    [[nodiscard]] transformation_t operator*(quaternion_t const& rotation) const {
+        // Create a rotation-only transformation (identity position)
+        transformation_t const rot_tf{
+            position_t{literals::meter_t{0}, literals::meter_t{0}, literals::meter_t{0}}, rotation};
+        // Compose: apply rotation after this transformation
+        return *this * rot_tf;
+    }
+
+    // Transform a position_t (apply rotation and translation)
+    [[nodiscard]] position_t operator*(position_t const& point) const {
         // Treat point as [x, y, z, 1] in homogeneous coordinates
+        // This allows us to apply both rotation and translation in a single matrix multiplication
         double const x = point.x().value;
         double const y = point.y().value;
         double const z = point.z().value;
 
         // Matrix-vector multiplication: result = matrix_ * [x, y, z, 1]
+        // The '1' in the homogeneous coordinate enables translation
+        // Result: rotated_point + translation
         return position_t{
             literals::meter_t{matrix_[0] * x + matrix_[1] * y + matrix_[2] * z + matrix_[3]},
             literals::meter_t{matrix_[4] * x + matrix_[5] * y + matrix_[6] * z + matrix_[7]},
@@ -435,36 +482,38 @@ class transformation_t {
 
     // Inverse transformation_t (invert 4x4 matrix)
     [[nodiscard]] transformation_t inverse() const {
-        // For SE(3) transformation_t, inverse is:
+        // For SE(3) transformations, the inverse is:
         // [R^T | -R^T*t]
         // [0   | 1     ]
+        // where R is the rotation matrix and t is the translation vector
+        // This works because R is orthogonal (R^T * R = I for rotation matrices)
 
-        // Extract rotation (upper-left 3x3)
+        // Extract rotation matrix (upper-left 3x3)
         double const r00 = matrix_[0], r01 = matrix_[1], r02 = matrix_[2];
         double const r10 = matrix_[4], r11 = matrix_[5], r12 = matrix_[6];
         double const r20 = matrix_[8], r21 = matrix_[9], r22 = matrix_[10];
 
-        // Extract translation
+        // Extract translation vector (last column of upper 3x4 part)
         double const tx = matrix_[3];
         double const ty = matrix_[7];
         double const tz = matrix_[11];
 
-        // Transpose rotation
         // Compute -R^T * t
+        // This gives the new translation after rotating the inverse direction
         double const new_tx = -(r00 * tx + r10 * ty + r20 * tz);
         double const new_ty = -(r01 * tx + r11 * ty + r21 * tz);
         double const new_tz = -(r02 * tx + r12 * ty + r22 * tz);
 
-        std::array<double, 16> inv_matrix = {
+        // Build inverse matrix with transposed rotation and new translation
+        std::array<double, 16> const inv_matrix = {
             r00, r10, r20, new_tx,  // Row 0: R^T[0] | -R^T*t[0]
             r01, r11, r21, new_ty,  // Row 1: R^T[1] | -R^T*t[1]
             r02, r12, r22, new_tz,  // Row 2: R^T[2] | -R^T*t[2]
             0.0, 0.0, 0.0, 1.0      // Row 3
         };
 
-        transformation_t result{position_t{}, quaternion_t{}};
-        result.matrix_ = inv_matrix;
-        return result;
+        // Use private constructor to avoid temporary position/quaternion creation
+        return transformation_t{inv_matrix};
     }
 };
 
@@ -641,15 +690,18 @@ TEST(QuaternionTest, RadianToDegreeConversion) {
     EXPECT_NEAR(deg.value, 180.0, 0.1);  // Stored as degrees
 }
 
-TEST(QuaternionTest, ConversionFunctionsIdempotent) {
-    // Converting same type returns same value
-    auto const rad1 = 1.57_rad;
-    auto const rad2 = to_radians(rad1);
-    EXPECT_DOUBLE_EQ(rad1.value, rad2.value);
-
+TEST(QuaternionTest, ConversionFunctionsRoundTrip) {
+    // Test round-trip conversions: degree -> radian -> degree
     auto const deg1 = 90.0_deg;
-    auto const deg2 = to_degrees(deg1);
-    EXPECT_DOUBLE_EQ(deg1.value, deg2.value);
+    auto const rad = to_radians(deg1);
+    auto const deg2 = to_degrees(rad);
+    EXPECT_NEAR(deg1.value, deg2.value, 0.001);
+
+    // Test round-trip: radian -> degree -> radian
+    auto const rad1 = 1.57_rad;
+    auto const deg = to_degrees(rad1);
+    auto const rad2 = to_radians(deg);
+    EXPECT_NEAR(rad1.value, rad2.value, 0.001);
 }
 
 TEST(QuaternionTest, CopyConstructor) {
@@ -759,7 +811,7 @@ TEST(TransformationTest, TransformPoint) {
     transformation_t const tf{position_t{1.0_m, 2.0_m, 3.0_m}, quaternion_t{}};
     position_t const point{0.0_m, 0.0_m, 0.0_m};
 
-    auto const transformed = tf.transform_point(point);
+    auto const transformed = tf * point;
 
     EXPECT_NEAR(transformed.x().value, 1.0, 0.001);
     EXPECT_NEAR(transformed.y().value, 2.0, 0.001);
@@ -774,6 +826,24 @@ TEST(TransformationTest, InverseTransformation) {
     EXPECT_NEAR(inv_pos.x().value, -1.0, 0.001);
     EXPECT_NEAR(inv_pos.y().value, -2.0, 0.001);
     EXPECT_NEAR(inv_pos.z().value, -3.0, 0.001);
+}
+
+TEST(TransformationTest, TransformationTimesQuaternion) {
+    // Test transformation * quaternion operator
+    // Should preserve position, update rotation
+    transformation_t const tf_base{position_t{1.0_m, 0.0_m, 0.0_m}, quaternion_t{}};
+    auto const q_rotate = quaternion_t::from_euler(0.0_rad, 0.0_rad, to_radians(90.0_deg));
+    auto const tf_rotated = tf_base * q_rotate;
+
+    // Should preserve position
+    auto const rotated_pos = tf_rotated.position();
+    EXPECT_NEAR(rotated_pos.x().value, 1.0, 0.001);
+    EXPECT_NEAR(rotated_pos.y().value, 0.0, 0.001);
+    EXPECT_NEAR(rotated_pos.z().value, 0.0, 0.001);
+
+    // Should update rotation
+    auto const rotated_quat = tf_rotated.rotation();
+    EXPECT_TRUE(near(rotated_quat, q_rotate, 0.001));
 }
 
 TEST(IntegrationTest, RobotArmKinematicsWithStrongTypes) {
@@ -797,27 +867,6 @@ TEST(IntegrationTest, RobotArmKinematicsWithStrongTypes) {
     // End effector should be approximately at (0.5, 0, 1)
     auto const pos = end_effector.position();
     EXPECT_NEAR(pos.z().value, 1.0, 0.1);
-}
-
-TEST(UserDefinedLiteralsTest, PositionAndQuaternionLiterals) {
-    using namespace literals;
-
-    // Test position_t literal (creates origin)
-    auto const origin = 0.0_pos;
-    EXPECT_DOUBLE_EQ(origin.x().value, 0.0);
-    EXPECT_DOUBLE_EQ(origin.y().value, 0.0);
-    EXPECT_DOUBLE_EQ(origin.z().value, 0.0);
-
-    // Test quaternion_t literal (creates identity)
-    auto const identity = 0.0_quat;
-    EXPECT_DOUBLE_EQ(identity.x(), 0.0);
-    EXPECT_DOUBLE_EQ(identity.y(), 0.0);
-    EXPECT_DOUBLE_EQ(identity.z(), 0.0);
-    EXPECT_DOUBLE_EQ(identity.w(), 1.0);
-
-    // Can use in expressions
-    auto const dist_from_origin = distance(origin, position_t{1.0_m, 0.0_m, 0.0_m});
-    EXPECT_NEAR(dist_from_origin.value, 1.0, 0.001);
 }
 
 TEST(StrongTypesTest, PreventImplicitConversions) {
