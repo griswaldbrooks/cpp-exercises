@@ -24,15 +24,15 @@ target_link_libraries(transform3d_test
 
 add_test(NAME Transform3DTests COMMAND transform3d_test)
 
-# Exercise 2: Sensor Array
-add_executable(sensor_array_test
-    test_sensor_array.cpp
+# Exercise 2: Rotation Averaging
+add_executable(rotation_averaging_test
+    test_rotation_averaging.cpp
 )
 
-target_link_libraries(sensor_array_test
+target_link_libraries(rotation_averaging_test
     PRIVATE
         GTest::gtest
         GTest::gtest_main
 )
 
-add_test(NAME SensorArrayTests COMMAND sensor_array_test)
+add_test(NAME RotationAveragingTests COMMAND rotation_averaging_test)

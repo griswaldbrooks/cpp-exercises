@@ -69,10 +69,8 @@ week3/
 ├── pixi.toml                       # Pixi project configuration
 ├── pixi.lock                       # Locked dependency versions
 ├── CMakeLists.txt                  # CMake build configuration
-├── test_transform3d.cpp            # Exercise 1 tests
-├── test_sensor_array.cpp           # Exercise 2 tests
-├── test_trajectory.cpp             # Exercise 3 tests
-├── test_multi_robot.cpp            # Exercise 4 tests
+├── test_transform3d.cpp            # Exercise 1 tests (3D Transformation Library)
+├── test_rotation_averaging.cpp     # Exercise 2 tests (Template Specialization)
 ├── README.md                       # Exercise descriptions
 ├── week3_solutions.md              # Solutions with explanations
 └── TESTING.md                      # This file
