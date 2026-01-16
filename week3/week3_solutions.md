@@ -825,288 +825,463 @@ auto const rotation = quaternion_t::from_euler(angle_rad, 0.0_rad, 0.0_rad);
 
 ---
 
-## Solution 2: Sensor Array Statistics
+## Solution 2: Template Specialization for Rotation Averaging
 
-### Key Concepts
+### Overview
 
-**std::span benefits:**
-- Zero-copy view of contiguous data
-- Works with `std::array`, `std::vector`, C-arrays
-- Const-correctness: `std::span<T const>` vs `std::span<T>`
-- No allocations (just pointer + size)
+This exercise demonstrates **template specialization** by implementing type-appropriate averaging algorithms:
+
+1. **Primary template**: Linear average for numeric types (`int`, `float`, `double`)
+2. **Quaternion specialization**: Eigenvector method (Markley et al., 2007)
+3. **Transformation specialization**: Matrix projection via polar decomposition
+
+### Part A: Primary Template (Linear Average)
+
+The primary template implements simple arithmetic mean for numeric types:
 
 ```cpp
-// Calculate the average of sensor readings - templated for any numeric type
+// Primary template: linear average for numeric types
 template<typename T>
-T average(std::span<T const> const readings) {
-    if (readings.empty()) {
+T average(std::span<T const> values) {
+    if (values.empty()) {
         return T{};
     }
-    // Start with first element to avoid issues with T{} not being "zero" for all types
-    // (e.g., quaternion_t{} is identity rotation {0,0,0,1}, not zero)
-    T sum = readings[0];
-    for (size_t i = 1; i < readings.size(); ++i) {
-        sum = sum + readings[i];
+
+    T sum = values[0];
+    for (size_t i = 1; i < values.size(); ++i) {
+        sum = sum + values[i];
     }
-    return sum / static_cast<double>(readings.size());
+    return sum / static_cast<double>(values.size());
+}
+```
+
+**Why start from `values[0]` instead of `T{0}`?**
+- Not all types have a meaningful zero value
+- For numeric types this is equivalent
+- Avoids assumptions about default construction
+
+### Part B: Quaternion Specialization (Eigenvector Method)
+
+For quaternions, linear averaging produces geometrically incorrect results. The correct approach finds the quaternion that minimizes the sum of squared geodesic distances to all inputs.
+
+**Algorithm (Markley et al., 2007):**
+1. Build 4×4 matrix M = Σ qᵢqᵢᵀ (sum of outer products)
+2. Find eigenvector corresponding to largest eigenvalue using power iteration
+3. Normalize to unit quaternion
+
+```cpp
+// Full specialization for quaternion_t
+template<>
+quaternion_t average<quaternion_t>(std::span<quaternion_t const> quaternions) {
+    if (quaternions.empty()) {
+        return quaternion_t{};  // Identity rotation
+    }
+
+    if (quaternions.size() == 1) {
+        return quaternions[0];
+    }
+
+    // Build 4x4 accumulator matrix M = Σ qᵢ ⊗ qᵢᵀ
+    // M is symmetric, so we only compute upper triangle
+    std::array<std::array<double, 4>, 4> M{};
+
+    for (auto const& q : quaternions) {
+        std::array<double, 4> const qv = {q.x(), q.y(), q.z(), q.w()};
+
+        // Add outer product qᵢ ⊗ qᵢᵀ to M
+        for (size_t i = 0; i < 4; ++i) {
+            for (size_t j = 0; j < 4; ++j) {
+                M[i][j] += qv[i] * qv[j];
+            }
+        }
+    }
+
+    // Power iteration to find eigenvector with largest eigenvalue
+    // Initialize with [0, 0, 0, 1] (identity quaternion direction)
+    std::array<double, 4> v = {0.0, 0.0, 0.0, 1.0};
+
+    constexpr int max_iterations = 20;
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        // v_new = M × v
+        std::array<double, 4> v_new{};
+        for (size_t i = 0; i < 4; ++i) {
+            for (size_t j = 0; j < 4; ++j) {
+                v_new[i] += M[i][j] * v[j];
+            }
+        }
+
+        // Normalize v_new
+        double const norm = std::sqrt(
+            v_new[0] * v_new[0] + v_new[1] * v_new[1] +
+            v_new[2] * v_new[2] + v_new[3] * v_new[3]
+        );
+
+        if (norm < 1e-10) {
+            break;  // Degenerate case
+        }
+
+        for (size_t i = 0; i < 4; ++i) {
+            v[i] = v_new[i] / norm;
+        }
+    }
+
+    // Return as normalized quaternion
+    return quaternion_t{v[0], v[1], v[2], v[3]};
+}
+```
+
+**Why power iteration works:**
+- The matrix M is symmetric positive semi-definite
+- Its largest eigenvector points in the direction of maximum "agreement" among quaternions
+- Power iteration converges to this dominant eigenvector
+- 20 iterations is sufficient for typical precision requirements
+
+### Part C: Transformation Specialization (Matrix Projection Method)
+
+For transformations, we average position linearly and rotation via polar decomposition—**without converting to quaternions**.
+
+**Algorithm:**
+1. Average translations linearly: t_avg = (1/n) Σ tᵢ
+2. Average rotation matrices element-wise: R_mean = (1/n) Σ Rᵢ
+3. Project R_mean back to SO(3) via polar decomposition: R_avg = R_mean × (R_meanᵀ × R_mean)^(-½)
+
+```cpp
+// Helper: 3x3 matrix type
+using Mat3 = std::array<std::array<double, 3>, 3>;
+
+// Helper: 3x3 matrix multiplication
+Mat3 mat3_multiply(Mat3 const& A, Mat3 const& B) {
+    Mat3 result{};
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            for (size_t k = 0; k < 3; ++k) {
+                result[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+    return result;
 }
 
-// Find the minimum value in sensor readings - templated for any numeric type
-template<typename T>
-T min_value(std::span<T const> const readings) {
-    if (readings.empty()) {
-        return std::numeric_limits<T>::max();
+// Helper: 3x3 matrix transpose
+Mat3 mat3_transpose(Mat3 const& A) {
+    Mat3 result{};
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            result[i][j] = A[j][i];
+        }
     }
-    return *std::min_element(readings.begin(), readings.end());
+    return result;
 }
 
-// Find the maximum value in sensor readings - templated for any numeric type
-template<typename T>
-T max_value(std::span<T const> const readings) {
-    if (readings.empty()) {
-        return std::numeric_limits<T>::lowest();
-    }
-    return *std::max_element(readings.begin(), readings.end());
-}
+// Helper: 3x3 matrix inverse (using cofactor method)
+Mat3 mat3_inverse(Mat3 const& A) {
+    // Compute determinant
+    double const det =
+        A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) -
+        A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
+        A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
 
-// Count how many readings exceed a threshold - templated for any numeric type
-template<typename T>
-size_t count_above_threshold(std::span<T const> const readings, T const threshold) {
-    return std::count_if(readings.begin(), readings.end(),
-                         [threshold](T const value) { return value > threshold; });
-}
-
-// Normalize readings to [0, 1] range (modifies in-place) - templated for any numeric type
-template<typename T>
-void normalize(std::span<T> const readings) {
-    if (readings.empty()) {
-        return;
+    if (std::abs(det) < 1e-10) {
+        // Return identity for singular matrix
+        return {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
     }
 
-    // Create const span for min/max computation
-    std::span<T const> const const_readings{readings};
-    T const min = min_value<T>(const_readings);
-    T const max = max_value<T>(const_readings);
-    T const range = max - min;
+    double const inv_det = 1.0 / det;
 
-    if (range == T{}) {
-        // All values are the same, set to 0.5
-        std::fill(readings.begin(), readings.end(), static_cast<T>(0.5));
-        return;
-    }
-
-    for (auto& value : readings) {
-        value = (value - min) / range;
-    }
-}
-
-// Sliding window average - templated for any numeric type
-// Uses O(n) algorithm: compute first window sum, then slide by
-// subtracting left element and adding right element
-template<typename T>
-std::vector<T> sliding_window_average(std::span<T const> const values, size_t const window_size) {
-    if (values.size() < window_size || window_size == 0) {
-        return {};
-    }
-
-    std::vector<T> result;
-    result.reserve(values.size() - window_size + 1);
-
-    // Compute sum of first window
-    // Start with first value to avoid issues with T{} not being "zero" for all types
-    T window_sum = values[0];
-    for (size_t i = 1; i < window_size; ++i) {
-        window_sum = window_sum + values[i];
-    }
-    result.push_back(window_sum / static_cast<double>(window_size));
-
-    // Slide the window: remove leftmost, add new rightmost
-    for (size_t i = window_size; i < values.size(); ++i) {
-        window_sum = window_sum - values[i - window_size] + values[i];
-        result.push_back(window_sum / static_cast<double>(window_size));
-    }
+    Mat3 result{};
+    result[0][0] = (A[1][1] * A[2][2] - A[1][2] * A[2][1]) * inv_det;
+    result[0][1] = (A[0][2] * A[2][1] - A[0][1] * A[2][2]) * inv_det;
+    result[0][2] = (A[0][1] * A[1][2] - A[0][2] * A[1][1]) * inv_det;
+    result[1][0] = (A[1][2] * A[2][0] - A[1][0] * A[2][2]) * inv_det;
+    result[1][1] = (A[0][0] * A[2][2] - A[0][2] * A[2][0]) * inv_det;
+    result[1][2] = (A[0][2] * A[1][0] - A[0][0] * A[1][2]) * inv_det;
+    result[2][0] = (A[1][0] * A[2][1] - A[1][1] * A[2][0]) * inv_det;
+    result[2][1] = (A[0][1] * A[2][0] - A[0][0] * A[2][1]) * inv_det;
+    result[2][2] = (A[0][0] * A[1][1] - A[0][1] * A[1][0]) * inv_det;
 
     return result;
 }
-```
 
-**Why Template All Functions?**
-
-By templating **all** sensor statistics functions, they work with any numeric type:
-- Built-in types: `int`, `float`, `double`
-- Custom numeric types like `quaternion_t` (if they support required operators)
-- Single implementation for all types
-- Type-safe (no implicit conversions)
-- Zero runtime overhead (template instantiation at compile time)
-
-**Key Implementation Details:**
-
-1. **Both `average` and `sliding_window_average` start from first element** instead of `T{}`
-   - Not all types have a meaningful "zero" value
-   - `quaternion_t{}` is identity rotation `{0, 0, 0, 1}`, not zero
-   - Starting with `values[0]` or `readings[0]` avoids adding wrong identity element
-   - This is a common pattern when working with non-numeric types
-
-2. **`normalize` creates const span internally**
-   - Avoids cv-qualifier conflicts when calling `min_value` and `max_value`
-   - `std::span<T>` → `std::span<T const>` conversion
-
-3. **Division by `static_cast<double>`** instead of `static_cast<T>`
-   - Works for types with `operator/(double)` like `quaternion_t`
-   - More flexible than requiring `operator/(T)`
-
-**Sliding Window Algorithm Explanation:**
-
-Instead of recalculating the sum for each window (O(n*w) complexity), we use a sliding approach:
-1. Calculate sum for first window
-2. For each subsequent window, subtract the element leaving and add the element entering
-3. This reduces complexity to O(n)
-
-**Usage with different types and containers:**
-```cpp
-// Works with doubles
-std::array<double, 5> arr = {1.0, 2.0, 3.0, 4.0, 5.0};
-auto avg1 = average<double>(arr);
-
-// Works with integers
-std::vector<int> vec = {10, 20, 30, 40};
-auto avg2 = average<int>(vec);
-
-// Works with C-arrays
-float c_arr[] = {1.5f, 2.5f, 3.5f};
-auto avg3 = average<float>(std::span{c_arr});
-
-// Sliding window with doubles
-std::array<double, 7> noisy = {1.0, 5.0, 2.0, 6.0, 3.0, 7.0, 4.0};
-auto smoothed = sliding_window_average(std::span<double const>{noisy}, 3);
-// smoothed = {2.67, 4.33, 3.67, 5.33, 4.67}
-
-// Sliding window with integers
-std::vector<int> int_data = {10, 20, 30, 40, 50};
-auto int_averaged = sliding_window_average(std::span<int const>{int_data}, 2);
-// int_averaged = {15, 25, 35, 45}
-
-// Average with quaternions (for IMU sensor fusion!)
-std::array<quaternion_t, 3> const imu_readings = {
-    quaternion_t{0.1, 0.2, 0.3, 0.9},
-    quaternion_t{0.2, 0.3, 0.4, 0.8},
-    quaternion_t{0.3, 0.4, 0.5, 0.7}
-};
-auto avg_orientation = average<quaternion_t>(imu_readings);
-// Component-wise averaging: avg_orientation = {0.2, 0.3, 0.4, 0.8}
-
-// Sliding window with quaternions (for IMU sensor smoothing!)
-std::array<quaternion_t, 5> quats = {
-    quaternion_t{0.1, 0.2, 0.3, 0.9},
-    quaternion_t{0.2, 0.3, 0.4, 0.8},
-    quaternion_t{0.3, 0.4, 0.5, 0.7},
-    quaternion_t{0.4, 0.5, 0.6, 0.6},
-    quaternion_t{0.5, 0.6, 0.7, 0.5}
-};
-auto smoothed_quats = sliding_window_average(std::span<quaternion_t const>{quats}, 3);
-// Component-wise averaging for sensor noise reduction
-
-// Subspans (slicing)
-auto first_half = std::span{arr}.subspan(0, 3);  // {1.0, 2.0, 3.0}
-auto avg_half = average<double>(first_half);
-```
-
-**Modern C++20 ranges alternative:**
-```cpp
-#include <ranges>
-
-template<typename T>
-T average(std::span<T const> const readings) {
-    if (readings.empty()) return T{};
-
-    auto const sum = std::ranges::fold_left(readings, T{}, std::plus{});
-    return sum / static_cast<T>(readings.size());
+// Helper: 3x3 identity matrix
+Mat3 mat3_identity() {
+    return {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
 }
 
-template<typename T>
-size_t count_above_threshold(std::span<T const> const readings, T const threshold) {
-    return std::ranges::count_if(readings,
-        [threshold](T v) { return v > threshold; });
+// Helper: Matrix addition and scalar multiplication
+Mat3 mat3_add(Mat3 const& A, Mat3 const& B) {
+    Mat3 result{};
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            result[i][j] = A[i][j] + B[i][j];
+        }
+    }
+    return result;
+}
+
+Mat3 mat3_scale(Mat3 const& A, double s) {
+    Mat3 result{};
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            result[i][j] = A[i][j] * s;
+        }
+    }
+    return result;
+}
+
+// Denman-Beavers iteration for matrix square root inverse
+// Computes A^(-1/2) for symmetric positive-definite A
+Mat3 mat3_sqrt_inverse(Mat3 const& A) {
+    Mat3 Y = A;
+    Mat3 Z = mat3_identity();
+
+    constexpr int max_iterations = 20;
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        Mat3 const Y_inv = mat3_inverse(Y);
+        Mat3 const Z_inv = mat3_inverse(Z);
+
+        Mat3 const Y_new = mat3_scale(mat3_add(Y, Z_inv), 0.5);
+        Mat3 const Z_new = mat3_scale(mat3_add(Z, Y_inv), 0.5);
+
+        Y = Y_new;
+        Z = Z_new;
+    }
+
+    return Z;  // Z converges to A^(-1/2)
+}
+
+// Extract 3x3 rotation matrix from transformation_t
+// (Assumes transformation_t stores 4x4 matrix in row-major order)
+Mat3 extract_rotation(transformation_t const& tf) {
+    // Get rotation by extracting the quaternion and converting to matrix
+    quaternion_t const q = tf.rotation();
+    double const x = q.x(), y = q.y(), z = q.z(), w = q.w();
+
+    double const xx = x * x, yy = y * y, zz = z * z;
+    double const xy = x * y, xz = x * z, yz = y * z;
+    double const wx = w * x, wy = w * y, wz = w * z;
+
+    return {{
+        {1 - 2*(yy + zz), 2*(xy - wz),     2*(xz + wy)    },
+        {2*(xy + wz),     1 - 2*(xx + zz), 2*(yz - wx)    },
+        {2*(xz - wy),     2*(yz + wx),     1 - 2*(xx + yy)}
+    }};
+}
+
+// Convert rotation matrix to quaternion
+quaternion_t mat3_to_quaternion(Mat3 const& R) {
+    double const trace = R[0][0] + R[1][1] + R[2][2];
+
+    if (trace > 0) {
+        double const s = 0.5 / std::sqrt(trace + 1.0);
+        return quaternion_t{
+            (R[2][1] - R[1][2]) * s,
+            (R[0][2] - R[2][0]) * s,
+            (R[1][0] - R[0][1]) * s,
+            0.25 / s
+        };
+    }
+
+    if (R[0][0] > R[1][1] && R[0][0] > R[2][2]) {
+        double const s = 2.0 * std::sqrt(1.0 + R[0][0] - R[1][1] - R[2][2]);
+        return quaternion_t{
+            0.25 * s,
+            (R[0][1] + R[1][0]) / s,
+            (R[0][2] + R[2][0]) / s,
+            (R[2][1] - R[1][2]) / s
+        };
+    }
+
+    if (R[1][1] > R[2][2]) {
+        double const s = 2.0 * std::sqrt(1.0 + R[1][1] - R[0][0] - R[2][2]);
+        return quaternion_t{
+            (R[0][1] + R[1][0]) / s,
+            0.25 * s,
+            (R[1][2] + R[2][1]) / s,
+            (R[0][2] - R[2][0]) / s
+        };
+    }
+
+    double const s = 2.0 * std::sqrt(1.0 + R[2][2] - R[0][0] - R[1][1]);
+    return quaternion_t{
+        (R[0][2] + R[2][0]) / s,
+        (R[1][2] + R[2][1]) / s,
+        0.25 * s,
+        (R[1][0] - R[0][1]) / s
+    };
+}
+
+// Full specialization for transformation_t
+template<>
+transformation_t average<transformation_t>(std::span<transformation_t const> transforms) {
+    if (transforms.empty()) {
+        return transformation_t{
+            position_t{meter_t{0}, meter_t{0}, meter_t{0}},
+            quaternion_t{}
+        };
+    }
+
+    if (transforms.size() == 1) {
+        return transforms[0];
+    }
+
+    double const n = static_cast<double>(transforms.size());
+
+    // Step 1: Average positions linearly
+    double sum_x = 0, sum_y = 0, sum_z = 0;
+    for (auto const& tf : transforms) {
+        position_t const pos = tf.position();
+        sum_x += pos.x().value;
+        sum_y += pos.y().value;
+        sum_z += pos.z().value;
+    }
+    position_t const avg_pos{
+        meter_t{sum_x / n},
+        meter_t{sum_y / n},
+        meter_t{sum_z / n}
+    };
+
+    // Step 2: Average rotation matrices element-wise
+    Mat3 R_mean{};
+    for (auto const& tf : transforms) {
+        Mat3 const R = extract_rotation(tf);
+        for (size_t i = 0; i < 3; ++i) {
+            for (size_t j = 0; j < 3; ++j) {
+                R_mean[i][j] += R[i][j] / n;
+            }
+        }
+    }
+
+    // Step 3: Project R_mean to SO(3) via polar decomposition
+    // R_avg = R_mean × (R_meanᵀ × R_mean)^(-1/2)
+    Mat3 const Rt = mat3_transpose(R_mean);
+    Mat3 const RtR = mat3_multiply(Rt, R_mean);
+    Mat3 const RtR_inv_sqrt = mat3_sqrt_inverse(RtR);
+    Mat3 const R_avg = mat3_multiply(R_mean, RtR_inv_sqrt);
+
+    // Convert rotation matrix to quaternion
+    quaternion_t const avg_rot = mat3_to_quaternion(R_avg);
+
+    return transformation_t{avg_pos, avg_rot};
 }
 ```
+
+**Why polar decomposition works:**
+- Any matrix A can be decomposed as A = UP where U is orthogonal and P is positive semi-definite
+- For our rotation average, R_mean = R_avg × P where R_avg ∈ SO(3)
+- The formula R_avg = R_mean × (R_meanᵀ × R_mean)^(-½) extracts the orthogonal part
+- This finds the rotation matrix closest to R_mean in the Frobenius norm
+
+### Why Two Independent Methods?
+
+The test suite validates that quaternion averaging and matrix averaging produce **identical results**:
+
+```cpp
+// Both methods should give the same answer!
+quaternion_t avg_quat = average<quaternion_t>(quats);
+transformation_t avg_tf = average<transformation_t>(transforms);
+assert(near(avg_quat, avg_tf.rotation(), 0.001));
+```
+
+By implementing both independently:
+- We verify mathematical correctness of each algorithm
+- If one used the other internally, the test would be circular
+- Students learn two different approaches to the same problem
+
+### Usage Examples
+
+```cpp
+using namespace literals;
+
+// Linear average for numeric types (uses primary template)
+std::array<double, 3> values = {1.0, 2.0, 3.0};
+double avg = average<double>(values);  // = 2.0
+
+// Quaternion average (uses specialization)
+std::array<quaternion_t, 3> quats = {
+    quaternion_t::from_euler(0.0_rad, 0.0_rad, 0.1_rad),
+    quaternion_t::from_euler(0.0_rad, 0.0_rad, 0.2_rad),
+    quaternion_t::from_euler(0.0_rad, 0.0_rad, 0.3_rad)
+};
+quaternion_t avg_quat = average<quaternion_t>(quats);
+
+// Transformation average (uses specialization)
+std::array<transformation_t, 3> transforms = {
+    transformation_t{position_t{1.0_m, 0.0_m, 0.0_m},
+                     quaternion_t::from_euler(0.0_rad, 0.0_rad, 0.1_rad)},
+    transformation_t{position_t{2.0_m, 0.0_m, 0.0_m},
+                     quaternion_t::from_euler(0.0_rad, 0.0_rad, 0.2_rad)},
+    transformation_t{position_t{3.0_m, 0.0_m, 0.0_m},
+                     quaternion_t::from_euler(0.0_rad, 0.0_rad, 0.3_rad)}
+};
+transformation_t avg_tf = average<transformation_t>(transforms);
+// avg_tf.position() = {2.0m, 0.0m, 0.0m}  (linear average)
+// avg_tf.rotation() ≈ avg_quat            (spherical average)
+```
+
+### References
+
+- Markley, F.L., Cheng, Y., Crassidis, J.L., Oshman, Y. (2007). *"Averaging Quaternions"*, Journal of Guidance, Control, and Dynamics, 30(4), 1193-1197.
+- Moakher, M. (2002). *"Means and Averaging in the Group of Rotations"*, SIAM Journal on Matrix Analysis and Applications.
+- Higham, N.J. (1986). *"Computing the Polar Decomposition—with Applications"*, SIAM Journal on Scientific and Statistical Computing.
 
 ---
 
 ## Key Takeaways
 
-### When to use `std::array`
+### When to Use Template Specialization
 
 ✅ **Use when:**
-- Size is known at compile time
-- Want stack allocation (performance)
-- Need compile-time size guarantees
-- Replacing C-style arrays
+- Different types need fundamentally different algorithms (e.g., rotation averaging)
+- The primary template makes no sense for certain types
+- You need to optimize for specific types without changing the interface
 
 ❌ **Don't use when:**
-- Size varies at runtime → use `std::vector`
-- Need frequent insertions/deletions → use `std::deque` or `std::list`
-- Size is very large → might overflow stack, use `std::vector`
+- Simple overloading would suffice
+- The algorithm is truly generic across all types
+- You're just handling edge cases (use `if constexpr` instead)
 
-### When to use `std::span`
+### Rotation Averaging Methods
 
-✅ **Use when:**
-- Function needs to work with multiple container types
-- Want to avoid copying large containers
-- Need a view/slice of contiguous data
-- Interfacing with C APIs (replaces `T*, size_t` pairs)
+| Method | Used For | Algorithm | Complexity |
+|--------|----------|-----------|------------|
+| Linear | Scalars, vectors | (Σxᵢ) / n | O(n) |
+| Eigenvector | Quaternions | Power iteration on M = Σqᵢqᵢᵀ | O(n + k) |
+| Polar decomposition | Rotation matrices | Denman-Beavers iteration | O(n + k) |
 
-❌ **Don't use when:**
-- Need ownership of data → use `std::vector` or `std::array`
-- Data isn't contiguous → use iterators or ranges
-- Lifetime management is complex → be very careful with dangling
+Where k = number of iterations (typically 20).
 
-### Performance Characteristics
-
-| Operation | `std::array` | `std::vector` | `std::span` |
-|-----------|--------------|---------------|-------------|
-| Construction | O(1) | O(n) | O(1) |
-| Random access | O(1) | O(1) | O(1) |
-| Size | Compile-time | Runtime | Runtime |
-| Storage | Stack | Heap | No storage (view) |
-| Reallocation | Never | Possible | N/A (view) |
-
-### Memory Layout
+### Why Linear Averaging Fails for Rotations
 
 ```cpp
-std::array<int, 3> arr = {1, 2, 3};
-// Stack: [1][2][3]
+// Two 180° rotations around different axes
+quaternion_t q1 = from_euler(180_deg, 0, 0);   // [1, 0, 0, 0]
+quaternion_t q2 = from_euler(0, 180_deg, 0);   // [0, 1, 0, 0]
 
-std::vector<int> vec = {1, 2, 3};
-// Stack: [ptr][size][capacity]
-// Heap:  [1][2][3]
-
-std::span<int> sp = arr;
-// Stack: [ptr][size]
-// Points to: arr's stack memory
+// Linear average: [0.5, 0.5, 0, 0] - NOT a valid rotation!
+// Eigenvector method: finds geometrically meaningful average
 ```
 
-### Common Pitfalls
+Linear averaging fails because:
+- Quaternions lie on the unit 3-sphere (S³)
+- Linear combination leaves the sphere
+- The "average" must stay on the manifold
 
-**1. Dangling span:**
+### Template Specialization Syntax
+
 ```cpp
-std::span<int> get_data() {
-    std::vector<int> temp = {1, 2, 3};
-    return temp;  // DANGER: span outlives vector!
-}
+// Primary template
+template<typename T>
+T average(std::span<T const> values);
+
+// Full specialization - note empty angle brackets
+template<>
+quaternion_t average<quaternion_t>(std::span<quaternion_t const> values);
 ```
 
-**2. Modifying const data:**
-```cpp
-std::array<int, 3> const arr = {1, 2, 3};
-std::span<int> sp = arr;  // Compile error! Need std::span<int const>
-```
-
-**3. Fixed extent vs dynamic extent:**
-```cpp
-std::span<int, 3> fixed = arr;     // Size known at compile time
-std::span<int> dynamic = arr;      // Size known at runtime
-std::span<int, 3> wrong = vec;     // Error if vec.size() != 3
-```
+Key points:
+- `template<>` signals full specialization
+- Function signature must match primary template exactly
+- Compiler selects most specific match at compile time
 
 ---
 
@@ -1115,70 +1290,60 @@ std::span<int, 3> wrong = vec;     // Error if vec.size() != 3
 **Q1: When should you use `std::array` instead of `std::vector`?**
 
 A: Use `std::array` when:
-- Size is known at compile time (e.g., 3D coordinates, RGB colors, fixed joints)
-- Performance is critical (stack allocation is faster than heap)
+- Size is known at compile time (e.g., 3D coordinates, rotation matrices)
+- Performance is critical (stack allocation is faster)
 - You want compile-time size checking
 - Working in embedded/constrained environments
 
 **Q2: What are the lifetime considerations when using `std::span`?**
 
-A: `std::span` is a non-owning view. It's your responsibility to ensure:
+A: `std::span` is a non-owning view. You must ensure:
 - The underlying data outlives the span
-- The data isn't reallocated (e.g., `vector::push_back` can invalidate)
+- The data isn't reallocated (e.g., `vector::push_back` invalidates)
 - You don't return spans to local variables
 
-**Q3: How does `std::span` improve on the old pattern of passing `T* ptr, size_t length`?**
+**Q3: Why can't you use linear averaging for rotations?**
 
-A: `std::span` provides:
-- Type safety (single object, no separate pointer and size)
-- Iterator interface (works with algorithms)
-- Bounds checking in debug mode
-- Const-correctness (`std::span<T const>`)
-- Subspan operations (slicing)
-- Better compiler optimization opportunities
+A: Rotations form a curved space (manifold), not a flat vector space:
+- Quaternions lie on the unit 3-sphere (S³)
+- Rotation matrices lie on SO(3)
+- Linear combinations leave these surfaces
+- The average must be "intrinsic" to the manifold (Fréchet mean)
 
-**Q4: Why does `std::span` support both dynamic and fixed extents?**
+**Q4: When would you use partial vs full specialization?**
 
-A: Fixed extent `std::span<T, N>` allows:
-- Compile-time size checks
-- Potential optimizations (no runtime size storage)
-- API contracts (function requires exactly N elements)
+A: Full specialization (what we used) is for a single specific type.
+Partial specialization (not supported for functions) would be for a family of types, e.g., all pointers.
 
-Dynamic extent `std::span<T>` allows:
-- Flexibility with variable-sized data
-- Works like a "view" of any sized container
-
-**Q5: What are the trade-offs between `std::array<T, N>` and C-style `T[N]` arrays?**
-
-A: `std::array` advantages:
-- No decay to pointer
-- Size accessible via `.size()`
-- Works with STL algorithms
-- Copy/assignment support
-- Structured bindings
-
-C-array advantages:
-- Slightly simpler syntax
-- Guaranteed aggregate initialization
-- (Very minor) Less verbose in some contexts
-
-**Q6: How can `std::span` help with interfacing to C libraries?**
-
-A: Many C APIs use `void* data, size_t size` or `T* array, int count` patterns:
-
+For functions, use overloading or `if constexpr` for partial-specialization-like behavior:
 ```cpp
-// C API
-void process_data(double const* data, size_t count);
-
-// Before: manual pointer + size
-std::vector<double> vec = {1, 2, 3};
-process_data(vec.data(), vec.size());
-
-// With span: cleaner wrapper
-void process_data_cpp(std::span<double const> data) {
-    process_data(data.data(), data.size());
+template<typename T>
+T average(std::span<T const> values) {
+    if constexpr (std::is_same_v<T, quaternion_t>) {
+        // Quaternion-specific code
+    } else {
+        // Generic code
+    }
 }
-
-process_data_cpp(vec);  // Works with vector
-process_data_cpp(arr);  // Works with array
 ```
+
+**Q5: How does power iteration find the dominant eigenvector?**
+
+A: Power iteration repeatedly multiplies a vector by M and normalizes:
+1. Start with any non-zero vector v
+2. Compute v' = Mv / ‖Mv‖
+3. Repeat until convergence
+
+The vector converges to the eigenvector with largest eigenvalue because:
+- Each multiplication amplifies components in the dominant eigenvector's direction
+- Normalization prevents overflow
+- Other components shrink relative to the dominant one
+
+**Q6: Why do the quaternion and matrix methods produce the same result?**
+
+A: Both methods are solving the same optimization problem:
+- Find the rotation that minimizes the sum of squared geodesic distances to all inputs
+
+The eigenvector method works in quaternion space (S³).
+The polar decomposition works in rotation matrix space (SO(3)).
+Since quaternions and rotation matrices are different representations of the same rotations, the solutions must agree.
